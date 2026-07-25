@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64997423955d54083bad6f94858df3aa, type: 3}
+  m_Name: SpawnConfig
+  m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.SpawnConfig
+  cooldownBeats: 4
+  livingEnemyCap: 8
+  minimumPlayerDistance: 4
+  phase1Weights: {x: 70, y: 20, z: 10}
+  phase2Weights: {x: 30, y: 50, z: 20}
+  phase3Weights: {x: 20, y: 30, z: 50}
