@@ -1,4 +1,5 @@
 using Countdown.Gameplay.Map.Config;
+using CountdownGame.Core;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -18,6 +19,81 @@ namespace Countdown.Gameplay.Map
 
         public MapGrid Grid { get; private set; }
         public bool IsReady => Grid != null;
+
+        public bool TryBuildCoreGridState(out GridState gridState, out string error)
+        {
+            gridState = null;
+            error = string.Empty;
+
+            if (Grid == null && !BuildGrid())
+            {
+                error = $"{nameof(MapController)} could not build {nameof(MapGrid)}.";
+                return false;
+            }
+
+            MapGridSettings settings = Grid.Settings;
+            gridState = new GridState(settings.Width, settings.Height, false);
+
+            for (int y = settings.MinPosition.Y; y <= settings.MaxPosition.Y; y++)
+            {
+                for (int x = settings.MinPosition.X; x <= settings.MaxPosition.X; x++)
+                {
+                    GridPosition mapPosition = new GridPosition(x, y);
+                    gridState.SetWalkable(MapToCoreCoord(mapPosition), Grid.IsWalkable(mapPosition));
+                }
+            }
+
+            return true;
+        }
+
+        public bool TryWorldToCoreCoord(Vector3 worldPosition, out GridCoord coord)
+        {
+            if (Grid == null && !BuildGrid())
+            {
+                coord = default;
+                return false;
+            }
+
+            GridPosition mapPosition = Grid.WorldToGrid(worldPosition);
+
+            if (!Grid.IsInsideMap(mapPosition))
+            {
+                coord = default;
+                return false;
+            }
+
+            coord = MapToCoreCoord(mapPosition);
+            return true;
+        }
+
+        public bool TryCoreCoordToWorld(GridCoord coord, out Vector3 worldPosition)
+        {
+            if (Grid == null && !BuildGrid())
+            {
+                worldPosition = default;
+                return false;
+            }
+
+            GridPosition mapPosition = CoreToMapPosition(coord);
+            if (!Grid.IsInsideMap(mapPosition))
+            {
+                worldPosition = default;
+                return false;
+            }
+
+            worldPosition = Grid.GridToWorld(mapPosition);
+            return true;
+        }
+
+        public Vector3 CoreCoordToWorld(GridCoord coord)
+        {
+            if (TryCoreCoordToWorld(coord, out Vector3 worldPosition))
+            {
+                return worldPosition;
+            }
+
+            throw new System.InvalidOperationException($"{nameof(MapController)} could not resolve {coord} to a valid world position.");
+        }
 
         private void Start()
         {
@@ -90,6 +166,22 @@ namespace Countdown.Gameplay.Map
         {
             EnsureGrid();
             return Grid.GetFourNeighbors(position, results);
+        }
+
+        private GridCoord MapToCoreCoord(GridPosition position)
+        {
+            MapGridSettings settings = Grid.Settings;
+            return new GridCoord(
+                position.X - settings.MinPosition.X,
+                position.Y - settings.MinPosition.Y);
+        }
+
+        private GridPosition CoreToMapPosition(GridCoord coord)
+        {
+            MapGridSettings settings = Grid.Settings;
+            return new GridPosition(
+                coord.X + settings.MinPosition.X,
+                coord.Y + settings.MinPosition.Y);
         }
 
         private CellTerrain ReadTerrain(GridPosition position, MapGridSettings settings)

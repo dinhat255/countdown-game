@@ -36,23 +36,29 @@ namespace CountdownGame.Unity
 
         private void TryMoveToScreenPoint(Vector2 screenPoint)
         {
-            if (boardCamera == null || boardTilemap == null) return;
+            if (boardCamera == null) return;
 
             var world = boardCamera.ScreenToWorldPoint(
                 new Vector3(screenPoint.x, screenPoint.y, -boardCamera.transform.position.z));
-            var clicked = boardTilemap.WorldToCell(world);
+            if (!controller.TryWorldToBoardCell(world, out Vector2Int clickedCell))
+            {
+                if (boardTilemap == null) return;
+                Vector3Int tileCell = boardTilemap.WorldToCell(world);
+                clickedCell = new Vector2Int(tileCell.x, tileCell.y);
+            }
+
             var clickedItem = FindGroundItemAt(world);
             if (clickedItem != null)
-                clicked = new Vector3Int(clickedItem.Cell.x, clickedItem.Cell.y, 0);
+                clickedCell = clickedItem.Cell;
             if (controller.TargetingSkillSlot >= 0)
             {
                 var result = controller.UseSkillAt(
-                    controller.TargetingSkillSlot, new Vector2Int(clicked.x, clicked.y));
+                    controller.TargetingSkillSlot, clickedCell);
                 if (result.Succeeded) controller.CancelSkillTarget();
                 return;
             }
             var player = controller.Simulation.Player.Position;
-            var destination = new Vector2Int(clicked.x, clicked.y);
+            var destination = clickedCell;
 
             if (TryGetMoveDirection(
                     new Vector2Int(player.X, player.Y), destination, out var direction))
