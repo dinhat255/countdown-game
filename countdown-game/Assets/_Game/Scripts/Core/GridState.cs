@@ -17,6 +17,7 @@ namespace CountdownGame.Core
         public int Height { get; }
         public IReadOnlyList<ActorState> Actors => _actors.Values.OrderBy(a => a.SpawnId).ToArray();
         public IReadOnlyList<GridCoord> SpawnPoints => _spawnPoints;
+        public bool IsSpawnPoint(GridCoord cell) => _spawnPoints.Contains(cell);
 
         public GridState(int width, int height, bool defaultWalkable = true)
         {
@@ -45,7 +46,9 @@ namespace CountdownGame.Core
             _actors.Values.FirstOrDefault(a => a.IsAlive && a.Position == cell);
 
         public IReadOnlyList<OverlayKind> GetOverlays(GridCoord cell) =>
-            _overlays.TryGetValue(cell, out var overlays) ? overlays : Array.Empty<OverlayKind>();
+            _overlays.TryGetValue(cell, out var overlays)
+                ? (IReadOnlyList<OverlayKind>)overlays
+                : Array.Empty<OverlayKind>();
 
         public void SetWalkable(GridCoord cell, bool walkable)
         {
@@ -78,6 +81,17 @@ namespace CountdownGame.Core
             }
             overlays.Add(kind);
         }
+
+        public bool RemoveOverlay(GridCoord cell, OverlayKind kind)
+        {
+            if (!_overlays.TryGetValue(cell, out var overlays)) return false;
+            var removed = overlays.Remove(kind);
+            if (overlays.Count == 0) _overlays.Remove(cell);
+            return removed;
+        }
+
+        public bool HasOverlay(GridCoord cell, OverlayKind kind) =>
+            _overlays.TryGetValue(cell, out var overlays) && overlays.Contains(kind);
 
         public void AddActor(ActorState actor)
         {

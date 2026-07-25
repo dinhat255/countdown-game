@@ -125,6 +125,68 @@ namespace CountdownGame.Tests
         }
 
         [Test]
+        public void GroundSkillItemOverlayDoesNotBlockPlayerMovement()
+        {
+            var grid = new GridState(3, 1);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(0, 0));
+            grid.AddActor(player);
+            grid.AddOverlay(new GridCoord(1, 0), OverlayKind.Item);
+
+            var result = new MovementResolver(grid).TryResolve(
+                new MovementRequest(player.Id, MovementKind.Move, GridDirection.Right));
+
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(player.Position, Is.EqualTo(new GridCoord(1, 0)));
+        }
+
+        [Test]
+        public void AvailablePlayerMoveCellsOnlyReturnsLegalDestinationsBeforeMoving()
+        {
+            var grid = new GridState(3, 3);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(1, 1));
+            grid.AddActor(player);
+            grid.AddActor(new ActorState(2, 2, ActorKind.Runner, new GridCoord(2, 1)));
+            grid.SetBlocker(new GridCoord(1, 2), true);
+            var simulation = new GameSimulation(
+                grid, player, new RunState(10), 7);
+
+            Assert.That(simulation.GetAvailablePlayerMoveCells(), Is.Empty);
+
+            simulation.StartBeat();
+
+            Assert.That(simulation.GetAvailablePlayerMoveCells(), Is.EqualTo(new[]
+            {
+                new GridCoord(1, 0),
+                new GridCoord(0, 1)
+            }));
+
+            Assert.That(simulation.TryPlayerMove(GridDirection.Down).Succeeded, Is.True);
+            Assert.That(simulation.GetAvailablePlayerMoveCells(), Is.Empty);
+        }
+
+        [Test]
+        public void ClickingDistantGroundSkillItemChoosesOneLegalApproachStep()
+        {
+            var grid = new GridState(5, 2);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(0, 0));
+            grid.AddActor(player);
+            grid.AddOverlay(new GridCoord(4, 0), OverlayKind.Item);
+
+            var found = PlayerInputAdapter.TryGetGroundItemApproachDirection(
+                grid, player.Position, new GridCoord(4, 0), out var direction);
+            var result = found
+                ? new MovementResolver(grid).TryResolve(
+                    new MovementRequest(player.Id, MovementKind.Move, direction))
+                : MovementResult.Rejected(
+                    player.Id, MovementFailureReason.InvalidDistance, player.Position, player.Position);
+
+            Assert.That(found, Is.True);
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(player.Position.ManhattanDistance(new GridCoord(0, 0)), Is.EqualTo(1));
+            Assert.That(player.Position.ManhattanDistance(new GridCoord(4, 0)), Is.EqualTo(3));
+        }
+
+        [Test]
         public void ClickMovementOnlyAcceptsAnAdjacentCardinalDestination()
         {
             Assert.That(PlayerInputAdapter.TryGetMoveDirection(
