@@ -197,5 +197,36 @@ namespace CountdownGame.Tests
             Assert.That(PlayerInputAdapter.TryGetMoveDirection(
                 new Vector2Int(2, 2), new Vector2Int(2, 4), out _), Is.False);
         }
+
+        [Test]
+        public void AdjacentEnemyClickIsRecognizedAsAttackTarget()
+        {
+            var grid = new GridState(4, 3);
+            var player = new ActorState(
+                1, 1, ActorKind.Player, new GridCoord(1, 1));
+            var adjacent = new ActorState(
+                2, 2, ActorKind.Runner, new GridCoord(2, 1));
+            var distant = new ActorState(
+                3, 3, ActorKind.Jumper, new GridCoord(3, 2));
+            grid.AddActor(player);
+            grid.AddActor(adjacent);
+            grid.AddActor(distant);
+
+            Assert.That(PlayerInputAdapter.IsAdjacentEnemyTarget(
+                grid, player.Position, adjacent.Position), Is.True);
+            Assert.That(PlayerInputAdapter.IsAdjacentEnemyTarget(
+                grid, player.Position, distant.Position), Is.False);
+            Assert.That(PlayerInputAdapter.IsAdjacentEnemyTarget(
+                grid, player.Position, player.Position), Is.False);
+            Assert.That(PlayerInputAdapter.TryGetLivingEnemy(
+                grid, adjacent.Id, out var resolved), Is.True);
+            Assert.That(resolved, Is.SameAs(adjacent));
+            Assert.That(PlayerInputAdapter.TryGetLivingEnemy(
+                grid, player.Id, out _), Is.False);
+
+            adjacent.ApplyDamage(adjacent.Health);
+            Assert.That(PlayerInputAdapter.TryGetLivingEnemy(
+                grid, adjacent.Id, out _), Is.False);
+        }
     }
 }
