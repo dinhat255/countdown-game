@@ -15,7 +15,7 @@ Player có ba slot Active dùng một lần, một slot Passive tồn tại lâu
 
 Cuối beat, nếu `PlayerMovedThisBeat = false`, player hồi `2` Mana sau cập nhật WC/Standing Streak và trước due hazards. Meditation đổi lượng hồi thành `3`. Mana luôn clamp ở `6`.
 
-Valid standard Move hoặc Dash ngăn hồi Mana. Movement bị reject không đổi `PlayerMovedThisBeat`, nên player vẫn đủ điều kiện hồi. Dùng một hoặc nhiều stationary skill không ngăn hồi.
+Valid standard Move hoặc Dash ngăn hồi Mana. Movement bị reject không đổi `PlayerMovedThisBeat`, nên player vẫn đủ điều kiện hồi. Dùng một stationary skill consume player action nhưng không ngăn hồi.
 
 ## Slot và dùng skill
 
@@ -23,7 +23,7 @@ Valid standard Move hoặc Dash ngăn hồi Mana. Movement bị reject không đ
 [Active 1] [Active 2] [Active 3] [Passive]
 ```
 
-Một Active chỉ resolve khi phase, slot, Mana, target, path, movement cap và guard hiệu lực đều hợp lệ. Toàn action được validate trước khi trừ Mana hoặc xóa slot. Player có thể dùng nhiều stationary Active trong một Player Phase nếu còn Mana và guard cho phép.
+Một Active chỉ resolve khi phase, player action, slot, Mana, target, path, movement cap và guard hiệu lực đều hợp lệ. Toàn action được validate trước khi trừ Mana hoặc xóa slot. Mỗi beat chỉ một Active, Attack, Move hoặc Dash có thể resolve thành công; invalid candidate không consume action.
 
 Active trùng nhau được phép. Passive chỉ có một slot nên không stack.
 
@@ -38,7 +38,7 @@ Active trùng nhau được phép. Passive chỉ có một slot nên không stac
 | 2 | Shockwave | 3 | Gây `2` damage lên mọi enemy trong tám ô quanh player; cần ít nhất một target |
 | 3 | Freeze | 4 | Skip Enemy Phase ngay sau đó; hazards vẫn resolve |
 
-Damage Up cộng `1` vào Snipe, Shockwave, Bomb và player Attack.
+Damage Up cộng `1` vào Snipe, Shockwave và Bomb. Player Attack là instant kill nên không nhận modifier.
 
 ### Dash
 
@@ -70,14 +70,14 @@ Shockwave đánh tám ô kề theo Chebyshev distance `1`. Tất cả enemy hợ
 
 ### Freeze
 
-Freeze skip toàn bộ Enemy Phase ngay sau Player Phase hiện tại. Pending Jumper/Thrower telegraph giữ Paused và được revalidate ở Enemy Phase đầu tiên không bị Freeze. Environmental Bomb, Turret và Bomb fuse vẫn tick/resolve. Freeze thứ hai trong cùng beat bị reject.
+Freeze skip toàn bộ Enemy Phase ngay sau Player Phase hiện tại. Pending Jumper/Thrower telegraph giữ Paused và được revalidate ở Enemy Phase đầu tiên không bị Freeze. Environmental Bomb, Turret và Bomb fuse vẫn tick/resolve. Mọi action khác trong cùng beat bị reject bởi one-action guard.
 
 ## Starter Passive
 
 | Passive | Hiệu ứng |
 | --- | --- |
 | WC Dampener | Giảm mỗi hit-based WC penalty `1`, tối thiểu `0`; không giảm WC của Dash |
-| Damage Up | Cộng `1` player Attack và offensive-skill damage; không tăng neutral hazard |
+| Damage Up | Cộng `1` offensive-skill damage; không tăng player instant-kill Attack hoặc neutral hazard |
 | Meditation | Tăng no-move Mana restoration từ `2` lên `3` |
 
 ## Ground drop

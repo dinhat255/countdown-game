@@ -8,7 +8,7 @@ Player Phase → Enemy Phase → End-of-beat Update
 
 Đầu beat, `SelfMovedThisBeat` của mọi actor reset về false. Với player, `PlayerMovedThisBeat` là alias của flag này.
 
-Mỗi actor resolve tối đa một self-directed valid movement trong beat. Standard Move và Dash chia sẻ cap của player; Runner Move, Jumper Move/Jump và Thrower Move dùng cap của từng enemy. Throw relocation không phải self-movement và không đổi movement flag của target.
+Player resolve tối đa một valid action trong beat: standard Move, Dash, Attack hoặc một Active skill. Enemy vẫn resolve tối đa một self-directed valid movement theo rule riêng. Runner Move, Jumper Move/Jump và Thrower Move dùng cap của từng enemy. Throw relocation không phải self-movement và không đổi movement flag của target.
 
 ## Validate trước resolve
 
@@ -16,14 +16,14 @@ Candidate được kiểm tra đầy đủ trước mutation:
 
 - Đúng phase và action còn hợp lệ.
 - Slot, Mana, target/range và per-beat guard hợp lệ.
-- Actor chưa self-move nếu action là movement.
+- Player chưa dùng valid action khác trong beat; enemy chưa self-move nếu candidate là movement.
 - Toàn path/endpoint trong map, walkable và occupancy hợp lệ.
 
-Candidate invalid bị reject, không tạo failure state, không trừ Mana, không xóa skill, không cộng WC/pressure, không partial movement và không consume movement opportunity.
+Candidate invalid bị reject, không tạo failure state, không trừ Mana, không xóa skill, không cộng WC/pressure, không partial movement và không consume player action.
 
 ## Player Phase
 
-Player có thể dùng nhiều stationary action nếu Mana và guard cho phép. Active hợp lệ trừ Mana và bị xóa ngay. Chỉ standard Move hoặc Dash đổi vị trí và đặt `PlayerMovedThisBeat = true`; mọi self-movement tiếp theo trong beat bị khóa.
+Action đầu tiên resolve hợp lệ consume toàn bộ player action của beat. Sau valid standard Move, Dash, Attack hoặc Active skill, mọi skill/Attack/Move/Dash khác bị reject tới beat sau. Active hợp lệ trừ Mana và bị xóa ngay. Chỉ standard Move hoặc Dash đổi vị trí và đặt `PlayerMovedThisBeat = true`.
 
 Dash đi ba ô theo facing trong một resolve, dùng một consumable slot, cộng `2 WC` đúng một lần và tạo Dash Pressure. Standard Move tạo Move Pressure. Chỉ landing của Move/Dash nhặt ground item.
 
@@ -55,13 +55,13 @@ Attack cooldown và environmental hazard timers vẫn theo rule riêng đã mô 
 
 - Freeze chỉ skip Enemy Phase; hazards và Bomb fuse vẫn chạy.
 - Ward còn armed hết hạn trước Player Phase kế tiếp nếu chưa chặn hit.
-- Stationary skill không làm mất no-move WC/Mana update.
+- Stationary skill consume player action nhưng không làm mất no-move WC/Mana update.
 - Valid Move/Dash ngăn Mana restoration; rejected movement không ngăn.
 - Bomb fuse luôn tick, kể cả beat có Move/Dash.
 
 ## Input buffer
 
-Chỉ buffer action kế tiếp và luôn validate lại trước resolve. Invalid input bị bỏ nhưng player có thể nhập candidate khác. Sau valid Move/Dash, input self-movement khác bị khóa tới beat sau.
+Chỉ buffer action kế tiếp và luôn validate lại trước resolve. Invalid input bị bỏ nhưng player có thể nhập candidate khác. Sau bất kỳ valid player action nào, mọi input skill/Attack/Move/Dash khác bị khóa tới beat sau.
 
 ## Tài liệu liên quan
 

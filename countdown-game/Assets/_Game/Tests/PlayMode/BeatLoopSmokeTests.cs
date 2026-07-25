@@ -31,7 +31,7 @@ namespace CountdownGame.Tests
             simulation.StartBeat();
             Assert.That(simulation.TryPlayerMove(GridDirection.Right).Succeeded, Is.True);
             Assert.That(simulation.TryPlayerDash().FailureReason,
-                Is.EqualTo(MovementFailureReason.AlreadySelfMoved));
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
             simulation.EndPlayerPhase();
             Assert.That(grid.Actors.Where(a => a.Kind != ActorKind.Player)
                 .OrderBy(a => a.SpawnId).Select(a => a.SpawnId), Is.Ordered);

@@ -9,7 +9,7 @@ WC là tiến trình Victory và thước đo áp lực duy nhất của player.
 ```text
 Nếu PlayerMovedThisBeat = false:
     Standing Streak tăng một lần
-    WC giảm một lần
+    WC giảm một lần, trừ beat có successful player Attack
     Mana hồi 2, hoặc 3 với Meditation, clamp 6
     Attack cooldown giảm 1 nếu AttackCooldownStartedThisBeat = false
     active Environmental Bomb CD giảm 1
@@ -39,13 +39,14 @@ Standard Move/Dash invalid bị reject trước resolve, vì vậy:
 ## Standing Streak
 
 ```text
-Nhịp 1: Attack + Bomb skill, không Move → Streak 1
-Nhịp 2: Snipe + Attack           → Streak 2
-Nhịp 3: valid Move hoặc Dash      → Streak 0
-Nhịp 4: End Beat, không Move      → Streak 1
+Nhịp 1: Attack, không Move       → Streak 1, WC không giảm
+Nhịp 2: Snipe                    → Streak 2, WC giảm
+Nhịp 3: valid Move hoặc Dash     → Streak 0
+Nhịp 4: End Beat, không action   → Streak 1
 ```
 
 Stationary action không cản streak.
+Successful player Attack không cản streak hoặc no-move Mana restore, nhưng bỏ qua WC reduction của beat đó.
 
 Đề xuất:
 

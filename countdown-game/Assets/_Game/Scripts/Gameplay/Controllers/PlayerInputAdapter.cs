@@ -53,6 +53,16 @@ namespace CountdownGame.Unity
             }
             var player = controller.Simulation.Player.Position;
             var destination = new Vector2Int(clicked.x, clicked.y);
+            var destinationCell = new GridCoord(destination.x, destination.y);
+            var clickedActor = controller.Simulation.Grid.GetActorAt(destinationCell);
+
+            if (clickedActor != null &&
+                clickedActor.Kind != ActorKind.Player &&
+                player.ManhattanDistance(destinationCell) == 1)
+            {
+                controller.Attack(destination);
+                return;
+            }
 
             if (TryGetMoveDirection(
                     new Vector2Int(player.X, player.Y), destination, out var direction))

@@ -5,12 +5,14 @@ namespace CountdownGame.Core
 {
     public enum GridDirection { Up, Right, Down, Left }
     public enum MovementKind { Move, Dash, Jump, Relocation }
+    public enum PlayerActionKind { None, Move, Dash, Attack, Skill }
     public enum MovementFailureReason
     {
         None,
         ActorNotFound,
         ActorDead,
         AlreadySelfMoved,
+        ActionAlreadyUsed,
         OutOfBounds,
         BlockedTerrain,
         OccupiedLanding,
@@ -46,7 +48,8 @@ namespace CountdownGame.Core
         InsufficientMana,
         InvalidTarget,
         MovementRejected,
-        EffectAlreadyActive
+        EffectAlreadyActive,
+        ActionAlreadyUsed
     }
     public enum PickupDecisionKind { Discard, ReplaceActive, ReplacePassive }
     public enum PickupFailureReason

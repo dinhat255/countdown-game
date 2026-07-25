@@ -7,16 +7,18 @@
 Quy tắc nền:
 
 - Một nhịp gồm Player Phase, Enemy Phase và end-of-beat update.
+- Player resolve tối đa một valid action mỗi beat: standard Move, Dash, Attack hoặc một Active skill. Invalid candidate không consume action.
 - Mỗi entity resolve tối đa một self-directed valid movement trong mỗi nhịp.
 - Player tự đổi vị trí bằng standard Move hoặc Dash hợp lệ; cả hai dùng chung cap một self-movement/beat.
 - Enemy chỉ tự đổi vị trí bằng quyết định movement hợp lệ của AI; Jumper dùng Jump. Ngoại lệ Thrower relocation được mô tả riêng bên dưới.
 - Input/candidate không hợp lệ bị reject trước resolve, không tạo failure state.
 - Mỗi entity có một flag `SelfMovedThisBeat`; `PlayerMovedThisBeat` là alias dùng cho player.
+- Successful player Attack giữ `PlayerMovedThisBeat = false` nhưng consume player action, nên player không thể dùng skill, Attack, Move hoặc Dash khác trong cùng beat.
 - Thrower là Enemy Lv3 và là ngoại lệ duy nhất được reposition Runner/Jumper; Throw không đổi movement flag của target.
 - Dash là voluntary self-movement skill; các skill khác, hit, hazard và status không đổi vị trí player. Không push/pull/throw player.
 - Environmental Bomb và Turret là neutral map hazards, không chiếm skill slot.
 - Freeze chỉ skip Enemy Phase, không ảnh hưởng hazard tick/resolve/fire.
-- No-Move update WC/streak và hồi `2` Mana, hoặc `3` với Meditation; Attack cooldown/hazard timer giữ rule riêng, Bomb fuse/status tick mỗi beat.
+- No-Move update WC/streak và hồi `2` Mana, hoặc `3` với Meditation; successful player Attack bỏ qua WC reduction nhưng vẫn update streak/Mana. Attack cooldown/hazard timer giữ rule riêng, Bomb fuse/status tick mỗi beat.
 - Due effects resolve Bomb theo placement order → Environmental Bomb → Turret theo stable map coordinate/order, apply từng effect ngay.
 - Player không có HP/Loss; hit cộng WC và có thể áp status được định nghĩa, nhưng status không reposition.
 - Victory duy nhất khi `WC ≤ 0`; Victory short-circuit spawn và UI pending khác.

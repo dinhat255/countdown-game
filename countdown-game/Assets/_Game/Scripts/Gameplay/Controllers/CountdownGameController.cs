@@ -87,6 +87,8 @@ namespace CountdownGame.Unity
         }
 
         public MovementResult Move(GridDirection direction) => _simulation.TryPlayerMove(direction);
+        public bool Attack(Vector2Int cell) =>
+            _simulation.TryPlayerAttack(new GridCoord(cell.x, cell.y));
         public SkillUseResult Dash()
         {
             var slot = _simulation.Skills.ActiveSlots
@@ -126,8 +128,12 @@ namespace CountdownGame.Unity
             Debug.Log($"[Countdown] {kind} pressure +{amount}");
         public void OverlayLanded(int actorId, GridCoord cell, OverlayKind kind) =>
             Debug.Log($"[Countdown] Actor {actorId} landed on {kind} at {cell}");
-        public void EnemyDied(int enemyId) =>
+        public void EnemyDied(int enemyId)
+        {
+            if (_views.TryGetValue(enemyId, out var view))
+                view.gameObject.SetActive(false);
             RefreshPlayerMoveHighlights();
+        }
         public void EnemySpawned(ActorState enemy) =>
             Debug.Log($"[Countdown] Spawned {enemy.Kind} #{enemy.Id} at {enemy.Position}");
 
@@ -157,8 +163,11 @@ namespace CountdownGame.Unity
 
         public void ManaChanged(int previousValue, int currentValue, string cause) =>
             Debug.Log($"[Countdown] Mana {previousValue} -> {currentValue} ({cause})");
-        public void SkillUsed(int slotIndex, string skillId, int manaSpent) =>
+        public void SkillUsed(int slotIndex, string skillId, int manaSpent)
+        {
             Debug.Log($"[Countdown] Used {skillId} from slot {slotIndex} for {manaSpent} mana");
+            RefreshPlayerMoveHighlights();
+        }
         public void SkillRejected(int slotIndex, string skillId, SkillUseFailureReason reason) =>
             Debug.Log($"[Countdown] Rejected {skillId ?? "empty"} in slot {slotIndex}: {reason}");
         public void SkillSlotChanged(int slotIndex, string skillId, bool passive) =>
