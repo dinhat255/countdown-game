@@ -1,0 +1,14 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: 10000000000000000000000000000002, type: 3}
+  m_Name: WC Dampener
+  m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.SkillDefinition
+  id: wc-dampener
+  category: 1
+  level: 1
+  manaCost: 0
+  targeting: 0
+  icon: {fileID: 0}
+  description: Reduce each hit-based WC penalty by one.

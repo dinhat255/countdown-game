@@ -32,6 +32,7 @@ namespace CountdownGame.Core
         public int RunSeed { get; }
         public int BeatNumber { get; }
         public ISimulationEventSink Events { get; }
+        private readonly Action<int, string> _playerHitResolver;
         public int DecisionOrdinal { get; set; }
 
         public EnemyContext(
@@ -40,7 +41,8 @@ namespace CountdownGame.Core
             ActorState player,
             int runSeed,
             int beatNumber,
-            ISimulationEventSink events)
+            ISimulationEventSink events,
+            Action<int, string> playerHitResolver = null)
         {
             Grid = grid;
             Movement = movement;
@@ -48,6 +50,7 @@ namespace CountdownGame.Core
             RunSeed = runSeed;
             BeatNumber = beatNumber;
             Events = events ?? NullSimulationEventSink.Instance;
+            _playerHitResolver = playerHitResolver;
         }
 
         public SeededRandomContext RandomFor(int actorId) =>
@@ -55,7 +58,8 @@ namespace CountdownGame.Core
 
         public void HitPlayer(int sourceId, string cause)
         {
-            Events.Hit(sourceId, Player.Id, cause);
+            if (_playerHitResolver != null) _playerHitResolver(sourceId, cause);
+            else Events.Hit(sourceId, Player.Id, cause);
         }
     }
 

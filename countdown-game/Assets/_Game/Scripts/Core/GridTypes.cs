@@ -34,6 +34,28 @@ namespace CountdownGame.Core
     }
 
     public enum OverlayKind { Item, EnvironmentalBomb, Hazard }
+    public enum SkillCategory { Active, Passive }
+    public enum SkillTargeting { None, Facing, Cell }
+    public enum SkillUseFailureReason
+    {
+        None,
+        WrongPhase,
+        InvalidSlot,
+        EmptySlot,
+        PassiveSkill,
+        InsufficientMana,
+        InvalidTarget,
+        MovementRejected,
+        EffectAlreadyActive
+    }
+    public enum PickupDecisionKind { Discard, ReplaceActive, ReplacePassive }
+    public enum PickupFailureReason
+    {
+        None,
+        NoPendingPickup,
+        InvalidDecision,
+        InvalidSlot
+    }
 
     [Serializable]
     public readonly struct GridCoord : IEquatable<GridCoord>, IComparable<GridCoord>
@@ -155,5 +177,79 @@ namespace CountdownGame.Core
             Landing = landing;
             TargetId = targetId;
         }
+    }
+
+    public readonly struct SkillTarget
+    {
+        public readonly GridCoord? Cell;
+
+        public SkillTarget(GridCoord cell)
+        {
+            Cell = cell;
+        }
+
+        public static SkillTarget None => default;
+    }
+
+    public readonly struct SkillUseResult
+    {
+        public readonly bool Succeeded;
+        public readonly SkillUseFailureReason FailureReason;
+        public readonly int SlotIndex;
+        public readonly string SkillId;
+        public readonly int ManaSpent;
+
+        private SkillUseResult(
+            bool succeeded,
+            SkillUseFailureReason failureReason,
+            int slotIndex,
+            string skillId,
+            int manaSpent)
+        {
+            Succeeded = succeeded;
+            FailureReason = failureReason;
+            SlotIndex = slotIndex;
+            SkillId = skillId;
+            ManaSpent = manaSpent;
+        }
+
+        public static SkillUseResult Success(int slotIndex, string skillId, int manaSpent) =>
+            new SkillUseResult(true, SkillUseFailureReason.None, slotIndex, skillId, manaSpent);
+
+        public static SkillUseResult Rejected(
+            int slotIndex, string skillId, SkillUseFailureReason reason) =>
+            new SkillUseResult(false, reason, slotIndex, skillId, 0);
+    }
+
+    public readonly struct PickupDecision
+    {
+        public readonly PickupDecisionKind Kind;
+        public readonly int SlotIndex;
+
+        public PickupDecision(PickupDecisionKind kind, int slotIndex = -1)
+        {
+            Kind = kind;
+            SlotIndex = slotIndex;
+        }
+    }
+
+    public readonly struct PickupResult
+    {
+        public readonly bool Succeeded;
+        public readonly PickupFailureReason FailureReason;
+        public readonly string SkillId;
+
+        private PickupResult(bool succeeded, PickupFailureReason failureReason, string skillId)
+        {
+            Succeeded = succeeded;
+            FailureReason = failureReason;
+            SkillId = skillId;
+        }
+
+        public static PickupResult Success(string skillId) =>
+            new PickupResult(true, PickupFailureReason.None, skillId);
+
+        public static PickupResult Rejected(PickupFailureReason reason) =>
+            new PickupResult(false, reason, null);
     }
 }

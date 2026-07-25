@@ -45,6 +45,17 @@ namespace CountdownGame.Core
         void TelegraphChanged(int enemyId, string kind, bool active, bool paused);
         void EnemyDecisionResolved(EnemyDecision decision);
         void PhaseChanged(BeatPhase phase);
+        void ManaChanged(int previousValue, int currentValue, string cause);
+        void SkillUsed(int slotIndex, string skillId, int manaSpent);
+        void SkillRejected(int slotIndex, string skillId, SkillUseFailureReason reason);
+        void SkillSlotChanged(int slotIndex, string skillId, bool passive);
+        void SkillDropped(GroundSkillItem item);
+        void SkillGroundItemRemoved(GroundSkillItem item);
+        void PickupPending(string skillId);
+        void PickupResolved(string skillId, PickupDecisionKind decision);
+        void DamageApplied(int sourceId, int targetId, int amount, string cause);
+        void WardChanged(bool armed);
+        void FreezeChanged(bool armed);
     }
 
     public sealed class NullSimulationEventSink : ISimulationEventSink
@@ -61,6 +72,17 @@ namespace CountdownGame.Core
         public void TelegraphChanged(int enemyId, string kind, bool active, bool paused) { }
         public void EnemyDecisionResolved(EnemyDecision decision) { }
         public void PhaseChanged(BeatPhase phase) { }
+        public void ManaChanged(int previousValue, int currentValue, string cause) { }
+        public void SkillUsed(int slotIndex, string skillId, int manaSpent) { }
+        public void SkillRejected(int slotIndex, string skillId, SkillUseFailureReason reason) { }
+        public void SkillSlotChanged(int slotIndex, string skillId, bool passive) { }
+        public void SkillDropped(GroundSkillItem item) { }
+        public void SkillGroundItemRemoved(GroundSkillItem item) { }
+        public void PickupPending(string skillId) { }
+        public void PickupResolved(string skillId, PickupDecisionKind decision) { }
+        public void DamageApplied(int sourceId, int targetId, int amount, string cause) { }
+        public void WardChanged(bool armed) { }
+        public void FreezeChanged(bool armed) { }
     }
 
     public sealed class RecordingEventSink : ISimulationEventSink
@@ -86,5 +108,24 @@ namespace CountdownGame.Core
             Events.Add($"Decision:{decision.EnemyId}:{decision.Kind}");
         }
         public void PhaseChanged(BeatPhase phase) => Events.Add($"Phase:{phase}");
+        public void ManaChanged(int previousValue, int currentValue, string cause) =>
+            Events.Add($"Mana:{previousValue}:{currentValue}:{cause}");
+        public void SkillUsed(int slotIndex, string skillId, int manaSpent) =>
+            Events.Add($"SkillUsed:{slotIndex}:{skillId}:{manaSpent}");
+        public void SkillRejected(int slotIndex, string skillId, SkillUseFailureReason reason) =>
+            Events.Add($"SkillRejected:{slotIndex}:{skillId}:{reason}");
+        public void SkillSlotChanged(int slotIndex, string skillId, bool passive) =>
+            Events.Add($"Slot:{slotIndex}:{skillId}:{passive}");
+        public void SkillDropped(GroundSkillItem item) =>
+            Events.Add($"Drop:{item.Id}:{item.SkillId}:{item.Cell}");
+        public void SkillGroundItemRemoved(GroundSkillItem item) =>
+            Events.Add($"GroundRemoved:{item.Id}:{item.SkillId}:{item.Cell}");
+        public void PickupPending(string skillId) => Events.Add($"PickupPending:{skillId}");
+        public void PickupResolved(string skillId, PickupDecisionKind decision) =>
+            Events.Add($"PickupResolved:{skillId}:{decision}");
+        public void DamageApplied(int sourceId, int targetId, int amount, string cause) =>
+            Events.Add($"Damage:{sourceId}:{targetId}:{amount}:{cause}");
+        public void WardChanged(bool armed) => Events.Add($"Ward:{armed}");
+        public void FreezeChanged(bool armed) => Events.Add($"Freeze:{armed}");
     }
 }

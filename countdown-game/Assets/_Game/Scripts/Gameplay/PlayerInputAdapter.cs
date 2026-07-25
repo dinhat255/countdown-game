@@ -1,5 +1,6 @@
 using CountdownGame.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
 
@@ -11,34 +12,25 @@ namespace CountdownGame.Unity
         [SerializeField] private Camera boardCamera;
         [SerializeField] private Tilemap boardTilemap;
 
-        private Rect _endTurnRect;
-        private bool _endTurnRequested;
-
         private void Awake()
         {
             if (boardCamera == null) boardCamera = Camera.main;
-            if (boardTilemap == null) boardTilemap = FindAnyObjectByType<Tilemap>();
+            if (boardTilemap == null && controller != null)
+                boardTilemap = controller.TerrainTilemap;
+            if (boardTilemap == null)
+                boardTilemap = FindAnyObjectByType<Tilemap>();
         }
 
         private void Update()
         {
-            if (_endTurnRequested)
-            {
-                _endTurnRequested = false;
-                if (controller != null && controller.Simulation != null &&
-                    controller.Simulation.Phase == BeatPhase.Player)
-                    controller.EndBeat();
-                return;
-            }
-
             if (controller == null || controller.Simulation == null ||
                 controller.Simulation.Phase != BeatPhase.Player ||
                 Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
 
             var pointer = Mouse.current.position.ReadValue();
-            var guiPointer = new Vector2(pointer.x, Screen.height - pointer.y);
-            if (_endTurnRect.Contains(guiPointer)) return;
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                return;
             TryMoveToScreenPoint(pointer);
         }
 
@@ -49,36 +41,60 @@ namespace CountdownGame.Unity
             var world = boardCamera.ScreenToWorldPoint(
                 new Vector3(screenPoint.x, screenPoint.y, -boardCamera.transform.position.z));
             var clicked = boardTilemap.WorldToCell(world);
+            var clickedItem = FindGroundItemAt(world);
+            if (clickedItem != null)
+                clicked = new Vector3Int(clickedItem.Cell.x, clickedItem.Cell.y, 0);
+            if (controller.TargetingSkillSlot >= 0)
+            {
+                var result = controller.UseSkillAt(
+                    controller.TargetingSkillSlot, new Vector2Int(clicked.x, clicked.y));
+                if (result.Succeeded) controller.CancelSkillTarget();
+                return;
+            }
             var player = controller.Simulation.Player.Position;
             var destination = new Vector2Int(clicked.x, clicked.y);
 
             if (TryGetMoveDirection(
                     new Vector2Int(player.X, player.Y), destination, out var direction))
                 controller.Move(direction);
+            else if (clickedItem != null && TryGetGroundItemApproachDirection(
+                         controller.Simulation.Grid,
+                         player,
+                         new GridCoord(clickedItem.Cell.x, clickedItem.Cell.y),
+                         out direction))
+                controller.Move(direction);
         }
 
-        private void OnGUI()
+        private static GroundSkillItemView FindGroundItemAt(Vector3 worldPoint)
         {
-            if (controller == null || controller.Simulation == null) return;
+            foreach (var hit in Physics2D.OverlapPointAll(worldPoint))
+            {
+                var item = hit.GetComponentInParent<GroundSkillItemView>();
+                if (item != null) return item;
+            }
+            return null;
+        }
 
-            const float width = 160f;
-            const float height = 52f;
-            _endTurnRect = new Rect(
-                Screen.width - width - 20f,
-                Screen.height - height - 20f,
-                width,
-                height);
-
-            var simulation = controller.Simulation;
-            var previousEnabled = GUI.enabled;
-            GUI.enabled = simulation.Phase == BeatPhase.Player;
-            if (GUI.Button(_endTurnRect, "END TURN"))
-                _endTurnRequested = true;
-            GUI.enabled = previousEnabled;
-
-            GUI.Box(
-                new Rect(_endTurnRect.x, _endTurnRect.y - 54f, width, 44f),
-                $"Beat {simulation.Run.BeatNumber}   WC {simulation.Run.Wc}");
+        public static bool TryGetGroundItemApproachDirection(
+            GridState grid,
+            GridCoord player,
+            GridCoord item,
+            out GridDirection direction)
+        {
+            direction = GridDirection.Up;
+            if (grid == null || !grid.HasOverlay(item, OverlayKind.Item)) return false;
+            var actor = grid.GetActorAt(player);
+            if (actor == null || actor.Kind != ActorKind.Player) return false;
+            var next = GridPathfinding.NextStep(
+                grid,
+                player,
+                item,
+                actor.Id,
+                new SeededRandomContext(0, 0, actor.Id, 0));
+            return next.HasValue && TryGetMoveDirection(
+                new Vector2Int(player.X, player.Y),
+                new Vector2Int(next.Value.X, next.Value.Y),
+                out direction);
         }
 
         public static bool TryGetMoveDirection(

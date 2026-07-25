@@ -15,17 +15,26 @@ namespace CountdownGame.Unity
         [SerializeField] private MovementConfig movementConfig;
         [SerializeField] private EnemyConfig enemyConfig;
         [SerializeField] private SpawnConfig spawnConfig;
+        [SerializeField] private EnemyHealthConfig enemyHealthConfig;
+        [SerializeField] private SkillCatalog skillCatalog;
+        [SerializeField] private SkillDropConfig skillDropConfig;
 
         [Header("Scene")]
         [SerializeField] private Tilemap terrainTilemap;
         [SerializeField] private GridActorView[] actorViews;
         [SerializeField] private Transform spawnPointsRoot;
         [SerializeField] private TelegraphView telegraphView;
+        [SerializeField] private GroundSkillItemView groundSkillItemPrefab;
+        [SerializeField] private PlayerMoveHighlightView playerMoveHighlightView;
 
         private readonly Dictionary<int, GridActorView> _views = new Dictionary<int, GridActorView>();
+        private readonly Dictionary<int, GroundSkillItemView> _groundItemViews =
+            new Dictionary<int, GroundSkillItemView>();
         private GameSimulation _simulation;
 
         public GameSimulation Simulation => _simulation;
+        public Tilemap TerrainTilemap => terrainTilemap;
+        public int TargetingSkillSlot { get; private set; } = -1;
 
         private void Awake()
         {
@@ -69,12 +78,30 @@ namespace CountdownGame.Unity
                 movementConfig != null ? movementConfig.ToModel() : new MovementTuning(),
                 enemyConfig != null ? enemyConfig.ToModel() : new EnemyTuning(),
                 spawnConfig != null ? spawnConfig.ToModel() : new SpawnConfiguration(),
-                this);
+                this,
+                skillDropConfiguration: skillDropConfig != null ? skillDropConfig.ToModel() : null,
+                enemyHealthConfiguration: enemyHealthConfig != null ? enemyHealthConfig.ToModel() : null,
+                skillCatalog: skillCatalog != null ? skillCatalog.ToModel() : null);
+            EnsurePlayerMoveHighlightView();
             _simulation.StartBeat();
         }
 
         public MovementResult Move(GridDirection direction) => _simulation.TryPlayerMove(direction);
-        public MovementResult Dash() => _simulation.TryPlayerDash();
+        public SkillUseResult Dash()
+        {
+            var slot = _simulation.Skills.ActiveSlots
+                .Select((skillId, index) => new { skillId, index })
+                .FirstOrDefault(value => value.skillId == SkillIds.Dash);
+            return _simulation.TryUseSkill(slot != null ? slot.index : -1);
+        }
+        public SkillUseResult UseSkill(int slotIndex) =>
+            _simulation.TryUseSkill(slotIndex);
+        public SkillUseResult UseSkillAt(int slotIndex, Vector2Int cell) =>
+            _simulation.TryUseSkill(slotIndex, new SkillTarget(new GridCoord(cell.x, cell.y)));
+        public void BeginSkillTarget(int slotIndex) => TargetingSkillSlot = slotIndex;
+        public void CancelSkillTarget() => TargetingSkillSlot = -1;
+        public PickupResult ResolvePickup(PickupDecisionKind decision, int slotIndex = -1) =>
+            _simulation.ResolvePendingPickup(new PickupDecision(decision, slotIndex));
 
         public void EndBeat(bool freeze = false)
         {
@@ -88,6 +115,7 @@ namespace CountdownGame.Unity
         {
             if (result.Succeeded && _views.TryGetValue(result.ActorId, out var view))
                 view.Present(result.Landing);
+            RefreshPlayerMoveHighlights();
         }
 
         public void Hit(int sourceId, int targetId, string cause) =>
@@ -98,7 +126,8 @@ namespace CountdownGame.Unity
             Debug.Log($"[Countdown] {kind} pressure +{amount}");
         public void OverlayLanded(int actorId, GridCoord cell, OverlayKind kind) =>
             Debug.Log($"[Countdown] Actor {actorId} landed on {kind} at {cell}");
-        public void EnemyDied(int enemyId) { }
+        public void EnemyDied(int enemyId) =>
+            RefreshPlayerMoveHighlights();
         public void EnemySpawned(ActorState enemy) =>
             Debug.Log($"[Countdown] Spawned {enemy.Kind} #{enemy.Id} at {enemy.Position}");
 
@@ -120,7 +149,74 @@ namespace CountdownGame.Unity
         public void EnemyDecisionResolved(EnemyDecision decision) =>
             Debug.Log($"[Countdown] Enemy {decision.EnemyId}: {decision.Kind}");
 
-        public void PhaseChanged(BeatPhase phase) =>
+        public void PhaseChanged(BeatPhase phase)
+        {
             Debug.Log($"[Countdown] Phase: {phase}");
+            RefreshPlayerMoveHighlights();
+        }
+
+        public void ManaChanged(int previousValue, int currentValue, string cause) =>
+            Debug.Log($"[Countdown] Mana {previousValue} -> {currentValue} ({cause})");
+        public void SkillUsed(int slotIndex, string skillId, int manaSpent) =>
+            Debug.Log($"[Countdown] Used {skillId} from slot {slotIndex} for {manaSpent} mana");
+        public void SkillRejected(int slotIndex, string skillId, SkillUseFailureReason reason) =>
+            Debug.Log($"[Countdown] Rejected {skillId ?? "empty"} in slot {slotIndex}: {reason}");
+        public void SkillSlotChanged(int slotIndex, string skillId, bool passive) =>
+            Debug.Log($"[Countdown] {(passive ? "Passive" : "Active")} slot {slotIndex}: {skillId ?? "empty"}");
+        public void SkillDropped(GroundSkillItem item) =>
+            PresentGroundItem(item);
+        public void SkillGroundItemRemoved(GroundSkillItem item)
+        {
+            if (_groundItemViews.TryGetValue(item.Id, out var view))
+            {
+                _groundItemViews.Remove(item.Id);
+                Destroy(view.gameObject);
+            }
+            Debug.Log($"[Countdown] Removed ground item {item.SkillId} at {item.Cell}");
+        }
+        public void PickupPending(string skillId) =>
+            Debug.Log($"[Countdown] Pickup pending: {skillId}");
+        public void PickupResolved(string skillId, PickupDecisionKind decision) =>
+            Debug.Log($"[Countdown] Pickup {skillId}: {decision}");
+        public void DamageApplied(int sourceId, int targetId, int amount, string cause) =>
+            Debug.Log($"[Countdown] Damage {sourceId} -> {targetId}: {amount} ({cause})");
+        public void WardChanged(bool armed) =>
+            Debug.Log($"[Countdown] Ward armed: {armed}");
+        public void FreezeChanged(bool armed) =>
+            Debug.Log($"[Countdown] Freeze armed: {armed}");
+
+        private void EnsurePlayerMoveHighlightView()
+        {
+            if (playerMoveHighlightView == null)
+                playerMoveHighlightView = GetComponent<PlayerMoveHighlightView>();
+            if (playerMoveHighlightView == null)
+                playerMoveHighlightView = gameObject.AddComponent<PlayerMoveHighlightView>();
+            playerMoveHighlightView.Initialize(terrainTilemap);
+        }
+
+        private void RefreshPlayerMoveHighlights()
+        {
+            if (playerMoveHighlightView == null || _simulation == null) return;
+            playerMoveHighlightView.Present(_simulation.GetAvailablePlayerMoveCells());
+        }
+
+        private void PresentGroundItem(GroundSkillItem item)
+        {
+            Debug.Log($"[Countdown] Dropped {item.SkillId} at {item.Cell}");
+            if (groundSkillItemPrefab == null) return;
+            var view = Instantiate(groundSkillItemPrefab, transform);
+            var definition = skillCatalog != null ? skillCatalog.Find(item.SkillId) : null;
+            var tileCell = new Vector3Int(item.Cell.X, item.Cell.Y, 0);
+            var cellCenter = terrainTilemap != null
+                ? terrainTilemap.GetCellCenterWorld(tileCell)
+                : new Vector3(item.Cell.X + 0.5f, item.Cell.Y + 0.5f, 0f);
+            view.Present(
+                item.Id,
+                item.SkillId,
+                new Vector2Int(item.Cell.X, item.Cell.Y),
+                cellCenter,
+                definition != null ? definition.icon : null);
+            _groundItemViews[item.Id] = view;
+        }
     }
 }
