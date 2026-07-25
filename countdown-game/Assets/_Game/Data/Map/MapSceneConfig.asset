@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7758b5ac2cd491f85bf40924160b500, type: 3}
+  m_Name: MapSceneConfig
+  m_EditorClassIdentifier: 
+  cameraOrthographicSize: 5.5
+  cameraOffset: {x: 0, y: 0}
+  groundSortingOrder: 0
+  wallSortingOrder: 10
+  obstacleSortingOrder: 20
+  actorSortingOrder: 30
+  itemSortingOrder: 40
+  hazardSortingOrder: 50
+  overlaySortingOrder: 100
+  groundTile: {fileID: 11400000, guid: ca75d3afe8fe50f41ad9422cc3a3900a, type: 2}
+  wallTile: {fileID: 11400000, guid: 1528781866347284e84915b76dbbf858, type: 2}
+  obstacleTile: {fileID: 11400000, guid: 4968f3d2c620adf4bbaca4a1d08fe775, type: 2}
+  overlayTile: {fileID: 11400000, guid: 2680014c411d3f844b45bfafe0370efd, type: 2}
