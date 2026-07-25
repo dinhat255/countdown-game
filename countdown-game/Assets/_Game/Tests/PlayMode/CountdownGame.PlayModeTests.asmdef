@@ -1,0 +1,10 @@
+{
+  "name": "CountdownGame.PlayModeTests",
+  "rootNamespace": "CountdownGame.Tests",
+  "references": [
+    "CountdownGame.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

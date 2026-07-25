@@ -1,0 +1,13 @@
+{
+  "name": "CountdownGame.EditModeTests",
+  "rootNamespace": "CountdownGame.Tests",
+  "references": [
+    "CountdownGame.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

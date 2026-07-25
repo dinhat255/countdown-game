@@ -1,143 +1,62 @@
 # Người chơi và chiến đấu
 
-## Tổng quan
+## Movement
 
-Player tự đổi vị trí bằng standard Move hoặc Dash hợp lệ. Dash là Active Movement Skill; Attack, hit, hazard, status và các skill khác không đổi vị trí player.
+Player chỉ đổi vị trí bằng valid standard Move hoặc consumable Dash.
 
-## Standard Move
+- Standard Move đi một ô cardinal.
+- Dash đi ba ô theo facing và dùng chung một self-movement cap.
+- Full path/endpoint được validate trước resolve.
+- Invalid movement không mutate state và không làm mất no-move Mana restoration.
+- Valid movement đặt `PlayerMovedThisBeat = true`, tạo pressure và chỉ nhặt ground item ở landing.
+- Dash cộng `2 WC` đúng một lần; đây không phải hit nên Ward/WC Dampener không giảm.
 
-Move theo bốn hướng, tối đa một lần resolve mỗi nhịp.
+Hit, hazard, status, Snipe, Ward, Bomb, Shockwave và Freeze không reposition player. Gameplay không có push, pull, teleport, knockback hoặc enemy throw lên player.
 
-Trước resolve, game kiểm tra:
+## Mana và stationary action
 
-- Ô trong map.
-- Không phải tường/vật cản.
-- Không bị entity chặn.
-- Player chưa dùng self-movement trong nhịp.
+Player có Mana `3/6` lúc bắt đầu run. Active hợp lệ trừ Mana và bị consume. Player có thể dùng nhiều stationary Active trong một Player Phase nếu đủ Mana và guard.
 
-Nếu invalid, input bị reject hoàn toàn và player có thể chọn lại.
-
-Nếu valid:
-
-- Player đổi một ô.
-- `PlayerMovedThisBeat = true`.
-- Tạo một Move Pressure.
-- Nếu vào ô Environmental Bomb Dormant, kích hoạt Bomb, hiện Countdown và không tick trong activation beat.
-- Mọi self-movement khác bị khóa đến nhịp sau.
-
-## Dash
-
-Dash là Active Movement Skill Lv1:
-
-- Resolve nhiều ô theo facing trong một self-movement.
-- Không xuyên wall/obstacle; có thể đi xuyên enemy nhưng không tự gây damage.
-- Toàn path và endpoint phải valid trước resolve. Landing occupancy/path details là `TBD`.
-- Invalid Dash reject toàn bộ: không partial move, cooldown, WC, pressure hoặc consume movement.
-- Valid Dash đặt `PlayerMovedThisBeat = true`, dùng chung cap với standard Move, cộng WC đúng một lần và đặt slot cooldown ngay.
-- WC từ Dash không phải hit; WC Penalty Reduction không giảm.
-- Tạo một Dash Spawn Pressure mạnh hơn Move Pressure; không cộng cả hai.
-- Landing trên Environmental Bomb Dormant kích hoạt Bomb. Intermediate tile có kích hoạt Bomb/nhặt item hay không là `TBD`.
-- Invulnerability/i-frame và hit timing trong Dash là `TBD`.
-
-Refresh có thể reset Dash cooldown nhưng không cấp lại self-movement. Nhiều Dash slot không thể chain cùng beat.
-
-## Không reposition player
-
-Gameplay hiện hành không có:
-
-- Push/pull.
-- Throw.
-- Teleport.
-- Knockback.
-- Hit/hazard/status đổi vị trí.
-
-Player position chỉ đổi do standard Move hoặc Dash hợp lệ do chính player chủ động.
-
-Thrower chỉ reposition Runner/Jumper. Impact hit tại ô đáp không đổi vị trí player.
+Nếu không valid self-move trong beat, player hồi `2` Mana cuối beat, hoặc `3` với Meditation. Mana restore xảy ra sau WC/Standing Streak và trước due hazards.
 
 ## Hit lên player
 
-Player không có HP, Death hoặc Loss. Invulnerability/i-frame riêng trong Dash là `TBD`.
+Player không có HP, Death, Loss hoặc Game Over. Hit hợp lệ:
 
-Mỗi hit hợp lệ:
+1. Emit hit và áp status được định nghĩa.
+2. Nếu Ward armed, WC penalty của hit này thành `0` và Ward bị consume.
+3. Nếu không có Ward nhưng WC Dampener equipped, penalty giảm `1`, tối thiểu `0`.
+4. Phần penalty còn lại cộng WC.
 
-- Cộng WC penalty.
-- Có thể áp status không đổi vị trí.
-- Không trực tiếp kết thúc run.
+Ward không xóa status. Dash WC không đi qua hit resolver.
 
-Collision debounce/stacking là `TBD`.
+## Enemy HP và damage
 
-Environmental Bomb và Turret dùng cùng hit semantics:
+Enemy dùng chung health/damage resolver với maximum HP cấu hình theo type. Damage emit event; HP về `0` emit death và enemy không còn block cell hoặc act.
 
-- Hazard hit player cộng WC.
-- Hazard hit enemy trừ HP.
-- Hazard hiện không áp status.
-- Hazard không reposition target.
-- WC Penalty Reduction áp dụng cho hazard hit.
+Starter offensive damage:
 
-## Stationary action
+- Snipe: `3`, target đầu tiên trong bốn facing cells.
+- Shockwave: `2`, mọi enemy trong tám ô kề.
+- Bomb: `2`, blast `3×3`.
+- Damage Up cộng `1` vào player Attack và các offensive skill.
+- Neutral Environmental Bomb/Turret không nhận Damage Up.
 
-Player có thể dùng nhiều action tại chỗ nếu guard cho phép:
-
-- Attack.
-- Bomb skill.
-- Refresh.
-- Freeze.
-- Các action tương lai không đổi vị trí.
+Damage không đổi movement flag của source hoặc target.
 
 ## Attack
 
-- Chủ động, không auto.
-- Đánh theo facing.
-- Không đổi vị trí actor/target.
-- Đặt attack cooldown ngay.
-- Có thể dùng cùng stationary skill.
+Attack là stationary action chủ động theo facing, có cooldown riêng và không dùng Active slot. Nó có thể dùng cùng consumable skill. Attack cooldown không bị Refresh vì Refresh không còn trong skill pool.
 
-Vùng Attack đề xuất:
+## End Beat và UI
 
-```text
-P X X
-```
+End Beat không hoàn tác action. UI player cần hiện:
 
-Đề xuất chọn enemy gần nhất; tie-break theo trục chính. Chỉ một enemy nhận damage.
-
-## Attack cooldown
-
-- Ngăn Attack spam.
-- Không tick cuối chính nhịp vừa Attack.
-- Đầu nhịp reset `AttackCooldownStartedThisBeat = false`; khi Attack, đặt flag thành true.
-- Ở end-of-beat no-Move, giảm `1` chỉ khi `AttackCooldownStartedThisBeat = false`.
-- Valid standard Move hoặc Dash pause Attack cooldown; Bomb skill fuse và status duration vẫn tick.
-- Refresh không reset Attack.
-
-## Outgoing damage
-
-Enemy vẫn có HP.
-
-```text
-Final Damage
-= Base Damage × Damage Multiplier
-```
-
-Damage Up chắc chắn tăng Attack và Bomb skill damage. Nó không tăng neutral Environmental Bomb/Turret damage. Công thức/cap là `TBD`.
-
-## End Beat
-
-- Kết thúc Player Phase.
-- Không hoàn tác action.
-- Enemy Phase bắt đầu.
-- WC/streak, active skill cooldown, eligible Attack cooldown và hazard timer dựa trên `PlayerMovedThisBeat` từ standard Move hoặc Dash.
-- Bomb skill fuse/status duration tick mỗi end-of-beat bất kể self-movement.
-
-## Phản hồi UI
-
-- Valid/invalid standard Move và Dash path/landing.
-- `PlayerMovedThisBeat`.
-- Timer/End Beat.
-- Attack/skill cooldown.
-- Hit và WC penalty.
-- Outgoing damage.
-- Move Pressure hoặc Dash Spawn Pressure, tối đa một event/beat.
+- Mana current/max và predicted no-move restore.
+- Movement-used state và valid/invalid Move/Dash path.
+- Hit/WC penalty, Ward và passive modifier.
+- Enemy HP, damage/death feedback.
+- Active slot consumption, targeting reason và pressure.
 
 ## Tài liệu liên quan
 

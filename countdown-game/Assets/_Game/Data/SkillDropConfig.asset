@@ -1,0 +1,13 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10000000000000000000000000000004, type: 3}
+  m_Name: SkillDropConfig
+  m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.SkillDropConfig
+  intervalBeats: 3
+  groundItemCap: 2
+  phase1LevelWeights: {x: 60, y: 30, z: 10}
+  phase2LevelWeights: {x: 30, y: 50, z: 20}
+  phase3LevelWeights: {x: 20, y: 35, z: 45}

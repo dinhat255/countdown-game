@@ -2,164 +2,122 @@
 
 ## Tổng quan
 
-Skill pool hiện tại có sáu skill. Dash là Active Movement Skill; các skill còn lại không đổi vị trí hoặc ảnh hưởng `PlayerMovedThisBeat`.
+Player có ba slot Active dùng một lần, một slot Passive tồn tại lâu dài và Mana.
 
-`Bomb skill` là skill slot của player, khác `Environmental Bomb` neutral đặt sẵn trên map.
+- Mana tối đa `6`, bắt đầu run với `3`.
+- Active hợp lệ trừ Mana rồi biến mất khỏi slot ngay.
+- Active không hợp lệ không trừ Mana, không xóa skill và không tạo side effect.
+- Passive không tốn Mana, không stack và giữ nguyên tới khi bị thay.
+- Chỉ Dash đổi vị trí player; mọi skill khác là stationary action.
+- Refresh và cooldown của Active không còn trong gameplay.
 
-Core loop:
+## Mana
 
-> Nhặt skill → quản lý ba slot → cân nhắc Dash hoặc action tại chỗ → không self-Move để hồi.
+Cuối beat, nếu `PlayerMovedThisBeat = false`, player hồi `2` Mana sau cập nhật WC/Standing Streak và trước due hazards. Meditation đổi lượng hồi thành `3`. Mana luôn clamp ở `6`.
 
-## Nhận skill
+Valid standard Move hoặc Dash ngăn hồi Mana. Movement bị reject không đổi `PlayerMovedThisBeat`, nên player vẫn đủ điều kiện hồi. Dùng một hoặc nhiều stationary skill không ngăn hồi.
 
-Player nhặt item khi valid standard Move hoặc Dash landing vào ô chứa item:
-
-- Item biến mất.
-- Skill vào slot trống đầu tiên.
-- Không cần action riêng.
-
-Phase tăng trọng số skill level tương ứng; mọi level vẫn có thể xuất hiện.
-Dash đi qua intermediate item có nhặt hay không là `TBD`.
-
-## Ba slot
+## Slot và dùng skill
 
 ```text
-[Slot 1] [Slot 2] [Slot 3]
+[Active 1] [Active 2] [Active 3] [Passive]
 ```
 
-- Mỗi slot có loại Active/Passive và cooldown riêng.
-- Cho phép nhặt trùng.
-- Passive có thể stack trong cap.
+Một Active chỉ resolve khi phase, slot, Mana, target, path, movement cap và guard hiệu lực đều hợp lệ. Toàn action được validate trước khi trừ Mana hoặc xóa slot. Player có thể dùng nhiều stationary Active trong một Player Phase nếu còn Mana và guard cho phép.
 
-## Skill thứ tư
+Active trùng nhau được phép. Passive chỉ có một slot nên không stack.
 
-Sau end-of-beat update:
+## Starter Active
 
-1. Pause gameplay.
-2. Hiện skill mới, ba slot và cooldown.
-3. Thay một slot hoặc bỏ skill.
+| Level | Skill | Mana | Hiệu ứng |
+| --- | --- | ---: | --- |
+| 1 | Dash | 1 | Đi ba ô theo facing; `+2 WC`, Dash Pressure và shared self-movement cap |
+| 1 | Snipe | 2 | Gây `3` damage lên enemy đầu tiên trong bốn ô facing; wall chặn |
+| 1 | Ward | 2 | Chặn WC tăng từ player hit kế tiếp trước Player Phase sau; status vẫn áp |
+| 2 | Bomb | 2 | Đặt bomb fuse hai beat trong Manhattan range `2` |
+| 2 | Shockwave | 3 | Gây `2` damage lên mọi enemy trong tám ô quanh player; cần ít nhất một target |
+| 3 | Freeze | 4 | Skip Enemy Phase ngay sau đó; hazards vẫn resolve |
 
-Skill mới Ready và không kế thừa cooldown.
+Damage Up cộng `1` vào Snipe, Shockwave, Bomb và player Attack.
 
-## Dùng active skill
+### Dash
 
-1. Validate cooldown/resource/target.
-2. Invalid candidate bị reject, không tiêu cost.
-3. Valid non-movement skill resolve tại chỗ; valid Dash resolve movement nguyên khối.
-4. Đặt cooldown/resource ngay.
+- Validate cả path ba ô và endpoint trước resolve.
+- Không xuyên wall/obstacle; có thể đi qua enemy nhưng endpoint không được occupied.
+- Dùng chung một self-movement opportunity với standard Move.
+- Invalid Dash không partial move, không trừ Mana, không xóa skill, không cộng WC và không tạo pressure.
+- Valid Dash đặt `PlayerMovedThisBeat = true`, cộng `2 WC` đúng một lần và chỉ nhặt item tại landing; intermediate cells không tương tác item.
 
-Chỉ Dash đổi vị trí player và dùng movement opportunity duy nhất.
+### Snipe
 
-## Cooldown
+Snipe quét tối đa bốn ô theo facing. Wall kết thúc ray. Enemy đầu tiên trên ray nhận damage; không có target hợp lệ thì action bị reject.
 
-```text
-Nếu PlayerMovedThisBeat = false:
-    mỗi active skill cooldown > 0 giảm 1
-```
+### Ward
 
-- Tick một lần cuối nhịp.
-- Non-movement skill vừa dùng nhận tick cùng no-Move beat.
-- Valid standard Move hoặc Dash làm mất tick của mọi active slot.
-- Dash đặt cooldown ngay và không tick trong chính beat Dash.
-- Passive không có cooldown.
+Ward chỉ chặn phần WC tăng của hit kế tiếp; status đi kèm hit vẫn áp. Ward còn hiệu lực nhưng chưa bị consume sẽ hết trước Player Phase kế tiếp. Dùng Ward khi Ward đã armed bị reject.
 
-## Refresh
+### Bomb
 
-- Reset cooldown mọi non-Refresh active skill.
-- Có thể reset Dash cooldown nhưng không reset `PlayerMovedThisBeat` hoặc cấp lại movement eligibility.
-- Không reset chính nó.
-- Không reset bất kỳ Refresh slot nào.
-- Skill được reset có thể dùng lại trong Player Phase nếu còn thời gian.
+- Ô đặt phải walkable, không có actor, item, bomb hoặc environmental hazard và cách player tối đa Manhattan `2`.
+- Bomb không đổi vị trí actor.
+- Fuse bắt đầu ở `2`, giảm mỗi end-of-beat bất kể self-movement.
+- Fuse về `0` nổ ngay; nhiều Bomb resolve theo placement order.
+- Blast `3×3` gây `2` player-originated damage lên enemy và không friendly fire player.
 
-## Danh sách sáu skill
+### Shockwave
 
-| Level | Skill | Loại | Vai trò |
-| --- | --- | --- | --- |
-| 1 | WC Penalty Reduction | Passive | Giảm WC penalty do hit |
-| 1 | Dash | Active Movement | Di chuyển nhiều ô theo facing, cộng WC và tạo Dash Spawn Pressure |
-| 2 | Bomb skill | Active | Outgoing damage diện rộng |
-| 2 | Damage Up | Passive | Tăng outgoing damage |
-| 3 | Refresh All Skills | Active | Reset non-Refresh skill |
-| 3 | Freeze | Active | Skip toàn Enemy Phase |
+Shockwave đánh tám ô kề theo Chebyshev distance `1`. Tất cả enemy hợp lệ nhận damage theo stable spawn order. Không có enemy trong vùng thì action bị reject.
 
-## WC Penalty Reduction
+### Freeze
 
-- Chỉ giảm WC tăng từ hit.
-- Áp dụng cho impact hit từ enemy bị Thrower ném.
-- Áp dụng cho Environmental Bomb/Turret hit.
-- Không vô hiệu hóa hit/status.
-- Stack cần cap.
+Freeze skip toàn bộ Enemy Phase ngay sau Player Phase hiện tại. Pending Jumper/Thrower telegraph giữ Paused và được revalidate ở Enemy Phase đầu tiên không bị Freeze. Environmental Bomb, Turret và Bomb fuse vẫn tick/resolve. Freeze thứ hai trong cùng beat bị reject.
 
-```text
-Final WC Penalty
-= Original WC Penalty × Penalty Multiplier
-```
+## Starter Passive
 
-WC do valid Dash không phải hit, nên passive này không giảm.
+| Passive | Hiệu ứng |
+| --- | --- |
+| WC Dampener | Giảm mỗi hit-based WC penalty `1`, tối thiểu `0`; không giảm WC của Dash |
+| Damage Up | Cộng `1` player Attack và offensive-skill damage; không tăng neutral hazard |
+| Meditation | Tăng no-move Mana restoration từ `2` lên `3` |
 
-## Dash
+## Ground drop
 
-- Đi nhiều ô theo facing trong một resolve; dùng chung cap self-movement với standard Move.
-- Validate toàn path/endpoint trước resolve; không xuyên wall/obstacle, có thể xuyên enemy.
-- Invalid reject toàn bộ: không partial move, cooldown, WC, pressure hoặc consume movement.
-- Valid đặt `PlayerMovedThisBeat = true`, cộng WC đúng một lần, reset streak và đặt slot cooldown.
-- Nhiều Dash slot không chain được trong cùng beat; Refresh chỉ reset cooldown.
-- Intermediate enemy traverse không tự gây damage.
-- Landing Environmental Bomb Dormant kích hoạt Bomb; intermediate Bomb/item interaction là `TBD`.
-- Landing occupancy/path details và invulnerability/i-frame/hit timing là `TBD`.
-- Dash Spawn Pressure mạnh hơn Move Pressure; không cộng chồng, tối đa một pressure event/beat.
+Sau enemy spawn ở beat hoàn tất `3, 6, 9…`, nếu chưa Victory, game thử tạo một skill item.
 
-## Bomb skill
+- Tối đa hai skill item tồn tại trên map; drop bị skip không được queue.
+- Drop dùng deterministic RNG channel riêng enemy spawn.
+- Trọng số level mặc định: Phase 1 `60/30/10`, Phase 2 `30/50/20`, Phase 3 `20/35/45`.
+- Sau khi chọn level, skill trong level đó được chọn đều.
+- Ô drop phải walkable, không phải spawn cell và không có actor, item, bomb hoặc environmental hazard.
+- Item là overlay không block movement; enemy có thể đứng trên item nhưng không nhặt.
 
-- Player đặt Bomb skill ở ô hợp lệ.
-- Không đổi vị trí player/enemy.
-- Object đã đặt có fuse riêng, tách khỏi cooldown của skill slot.
-- Fuse giảm `1` mỗi end-of-beat bất kể player self-movement.
-- Fuse vừa đạt `0` nổ ngay trong cùng end-of-beat, trước threshold/Victory.
-- Nhiều Bomb skill nổ theo placement order; damage/WC áp ngay sau từng Bomb.
-- Nổ `3×3`, gây outgoing damage lên enemy.
+Player chỉ nhặt item khi valid standard Move hoặc Dash landing lên ô đó. Intermediate Dash cell không nhặt.
 
-```text
-X X X
-X B X
-X X X
-```
+## Pickup và replacement
 
-Bomb skill friendly fire là `TBD`; nếu bật, hit player sẽ cộng WC và không đổi vị trí.
+- Active vào Active slot trống đầu tiên.
+- Passive vào Passive slot nếu đang trống.
+- Nếu matching slot type đầy, item bị xóa khỏi ground và skill mới vào pending pickup.
+- Pending Active tự điền nếu một Active slot trống trước khi replacement panel mở.
+- Nếu vẫn đầy, player thay đúng loại slot hoặc discard skill mới.
+- Passive pending chỉ có thể thay Passive hiện tại hoặc bị discard.
 
-Slot cooldown của Bomb skill chỉ tick ở no-Move beat như active skill khác. Fuse của Bomb đã đặt không dùng timing này hoặc timing của Environmental Bomb.
-
-## Damage Up
-
-- Tăng Attack damage.
-- Chắc chắn tăng Bomb skill damage.
-- Không tăng neutral Environmental Bomb hoặc Turret damage.
-- Công thức/cap là `TBD`.
-
-## Freeze
-
-- Enemy bỏ toàn bộ Enemy Phase.
-- Chặn movement, telegraph, Throw và stationary action.
-- Pending Throw telegraph giữ Paused; original lock revalidate ở Enemy Phase đầu tiên hết Freeze.
-- Không ảnh hưởng Environmental Bomb/Turret tick, resolve, Ready fire-check hoặc shot.
-- Enemy mới spawn nhận duration còn lại.
-- Freeze mới refresh duration, không vượt cap.
+Victory short-circuit drop và pending UI. Priority còn lại là high-WC dialog → pickup replacement → phase panel.
 
 ## UI skill
 
-Mỗi slot hiển thị:
+UI hiển thị:
 
-- Icon/tên.
-- Active/Passive.
-- Ready/cooldown.
-- Invalid condition.
-- Preview tick theo `PlayerMovedThisBeat`.
-- Bomb slot cooldown và placed fuse hiển thị thành hai timer tách biệt.
-- Dash hiển thị facing path, landing validity, `+WC`, movement-used state và Dash Spawn Pressure.
+- Mana `current/max` và dự đoán `+2` hoặc `+3` khi no-move.
+- Ba Active slot với icon, Mana cost, targeting và invalid reason.
+- Một Passive slot.
+- Dash path, landing validity, `+2 WC`, movement-used state và pressure.
+- Ground item, Bomb fuse, Ward/Freeze armed state.
+- Replacement/discard panel đúng category.
 
 ## Tài liệu liên quan
 
 - [Hệ thống nhịp](./beat-and-action-system.md)
-- [Enemy và spawn](./enemies-and-spawning.md)
+- [Player và combat](./player-and-combat.md)
 - [Map và UI](./map-ui-and-game-flow.md)
 - [Environmental Hazards](./environmental-hazards.md)
