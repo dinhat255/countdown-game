@@ -1,0 +1,118 @@
+# ==============================
+# Unity-generated folders
+# ==============================
+
+/countdown-game/[Ll]ibrary/
+/countdown-game/[Tt]emp/
+/countdown-game/[Oo]bj/
+/countdown-game/[Bb]uild/
+/countdown-game/[Bb]uilds/
+/countdown-game/[Ll]ogs/
+/countdown-game/[Uu]ser[Ss]ettings/
+/countdown-game/[Mm]emoryCaptures/
+/countdown-game/[Rr]ecordings/
+
+
+# ==============================
+# IDE and editor folders
+# ==============================
+
+/.vs/
+/.idea/
+/.vscode/
+
+/countdown-game/.vs/
+/countdown-game/.idea/
+/countdown-game/.vscode/
+
+
+# ==============================
+# IDE-generated files
+# ==============================
+
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.DotSettings.user
+
+
+# ==============================
+# Debug and crash files
+# ==============================
+
+*.log
+sysinfo.txt
+mono_crash.*
+
+
+# ==============================
+# Generated build artifacts
+# ==============================
+
+*.apk
+*.aab
+*.app
+*.unitypackage
+*.unitypackage.meta
+
+
+# ==============================
+# Platform and package caches
+# ==============================
+
+/.gradle/
+/countdown-game/.gradle/
+
+/countdown-game/[Ss]erver[Dd]ata/
+crashlytics-build.properties
+
+
+# ==============================
+# Generated Unity assets
+# ==============================
+
+/countdown-game/[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]et[Bb]rains*
+/countdown-game/[Aa]ssets/[Uu]nity.[Vv]isual[Ss]cripting.[Gg]enerated/
+/countdown-game/[Aa]ssets/[Ss]cene[Dd]ependency[Cc]ache*
+/countdown-game/[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+
+# ==============================
+# Addressables-generated data
+# ==============================
+
+/countdown-game/[Aa]ssets/[Ss]treamingAssets/aa*
+/countdown-game/[Aa]ssets/[Aa]ddressableAssetsData/link.xml*
+/countdown-game/[Aa]ssets/[Aa]ddressables_[Tt]emp*
+/countdown-game/[Aa]ssets/[Aa]ddressableAssetsData/*/*.bin*
+
+
+# ==============================
+# Operating system files
+# ==============================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+
+# ==============================
+# AI agent files
+# ==============================
+
+/AGENTS.md
+/memory_bank/

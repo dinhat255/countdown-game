@@ -1,0 +1,8 @@
+{
+  "name": "CountdownGame.Runtime",
+  "rootNamespace": "CountdownGame",
+  "references": [
+    "Unity.InputSystem"
+  ],
+  "autoReferenced": true
+}
