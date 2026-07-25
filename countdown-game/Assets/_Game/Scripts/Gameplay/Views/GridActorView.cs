@@ -20,6 +20,7 @@ namespace CountdownGame.Unity
 
         public void Present(GridCoord cell)
         {
+            gameObject.SetActive(true);
             Vector3 position = _cellCenterResolver != null
                 ? _cellCenterResolver(cell)
                 : new Vector3(cell.X + 0.5f, cell.Y + 0.5f, transform.position.z);

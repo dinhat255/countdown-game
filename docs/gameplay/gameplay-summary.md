@@ -14,13 +14,13 @@
 Player Phase → Enemy Phase → End-of-beat Update
 ```
 
-Player và mỗi enemy chỉ có một self-directed valid movement/beat. Standard Move và Dash chia sẻ player movement cap. Invalid candidate không mutate state hoặc tiêu resource.
+Player chỉ có một valid action/beat: standard Move, Dash, Attack hoặc một Active skill. Mỗi enemy chỉ có một self-directed valid movement/beat theo rule riêng. Invalid candidate không mutate state, tiêu resource hoặc consume player action.
 
 Nếu player không valid self-move:
 
-- WC giảm và Standing Streak tăng.
+- Standing Streak tăng; WC giảm trừ beat có successful player Attack.
 - Mana hồi `2`, hoặc `3` với Meditation, tối đa `6`.
-- Stationary skills không ngăn các update này.
+- Stationary skills không ngăn các update này; successful player Attack chỉ ngăn WC reduction.
 
 Nếu player valid Move/Dash:
 
@@ -44,7 +44,7 @@ Run bắt đầu `3/6` Mana. Player có ba Active slot dùng một lần và m�
 | Passive | Effect |
 | --- | --- |
 | WC Dampener | Hit-based WC penalty `-1`, tối thiểu `0`; không áp Dash |
-| Damage Up | Player Attack/offensive skill damage `+1`; neutral hazard không tăng |
+| Damage Up | Offensive skill damage `+1`; player instant-kill Attack và neutral hazard không tăng |
 | Meditation | No-move Mana restore `2 → 3` |
 
 ## Drop và pickup
@@ -55,7 +55,7 @@ Item là non-blocking overlay. Chỉ landing của valid player Move/Dash nhặt
 
 ## Combat và hazards
 
-Enemy maximum HP cấu hình theo Runner/Jumper/Thrower. Snipe, Shockwave, Bomb và Attack dùng chung damage/death resolver và không đổi movement flags.
+Enemy maximum HP cấu hình theo Runner/Jumper/Thrower. Snipe, Shockwave và Bomb gây damage. Player Attack chọn và giết một enemy ở ô cardinal kề bên qua shared damage/death resolver. Attack không đổi vị trí hoặc movement flag, nhưng consume player action nên player không thể dùng skill, Attack, Move hoặc Dash khác trong cùng beat. Successful Attack cũng chặn no-move WC reduction của beat đó.
 
 Freeze chỉ skip Enemy Phase. End-of-beat vẫn hồi Mana, tick Bomb fuse/status và resolve due effects theo:
 

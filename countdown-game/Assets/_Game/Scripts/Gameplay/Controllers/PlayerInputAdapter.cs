@@ -47,6 +47,18 @@ namespace CountdownGame.Unity
                 clickedCell = new Vector2Int(tileCell.x, tileCell.y);
             }
 
+            var clickedActorView = FindActorViewAt(world);
+            var clickedEnemy = clickedActorView != null &&
+                               TryGetLivingEnemy(
+                                   controller.Simulation.Grid,
+                                   clickedActorView.actorId,
+                                   out var resolvedEnemy)
+                ? resolvedEnemy
+                : null;
+            if (clickedEnemy != null)
+                clickedCell = new Vector2Int(
+                    clickedEnemy.Position.X, clickedEnemy.Position.Y);
+
             var clickedItem = FindGroundItemAt(world);
             if (clickedItem != null)
                 clickedCell = clickedItem.Cell;
@@ -59,6 +71,23 @@ namespace CountdownGame.Unity
             }
             var player = controller.Simulation.Player.Position;
             var destination = clickedCell;
+            var destinationCell = new GridCoord(destination.x, destination.y);
+
+            if (clickedActorView != null &&
+                clickedActorView.actorKind != ActorKind.Player)
+            {
+                if (clickedEnemy != null &&
+                    player.ManhattanDistance(clickedEnemy.Position) == 1)
+                    controller.Attack(destination);
+                return;
+            }
+
+            if (IsAdjacentEnemyTarget(
+                    controller.Simulation.Grid, player, destinationCell))
+            {
+                controller.Attack(destination);
+                return;
+            }
 
             if (TryGetMoveDirection(
                     new Vector2Int(player.X, player.Y), destination, out var direction))
@@ -79,6 +108,44 @@ namespace CountdownGame.Unity
                 if (item != null) return item;
             }
             return null;
+        }
+
+        private static GridActorView FindActorViewAt(Vector3 worldPoint)
+        {
+            foreach (var view in FindObjectsByType<GridActorView>(FindObjectsSortMode.None))
+            {
+                foreach (var actorRenderer in view.GetComponentsInChildren<Renderer>())
+                {
+                    if (!actorRenderer.enabled) continue;
+                    var bounds = actorRenderer.bounds;
+                    var pointAtRendererDepth =
+                        new Vector3(worldPoint.x, worldPoint.y, bounds.center.z);
+                    if (bounds.Contains(pointAtRendererDepth)) return view;
+                }
+            }
+            return null;
+        }
+
+        public static bool TryGetLivingEnemy(
+            GridState grid,
+            int actorId,
+            out ActorState enemy)
+        {
+            enemy = grid?.GetActor(actorId);
+            if (enemy != null && enemy.IsAlive && enemy.Kind != ActorKind.Player)
+                return true;
+            enemy = null;
+            return false;
+        }
+
+        public static bool IsAdjacentEnemyTarget(
+            GridState grid,
+            GridCoord player,
+            GridCoord target)
+        {
+            if (grid == null || player.ManhattanDistance(target) != 1) return false;
+            var actor = grid.GetActorAt(target);
+            return actor != null && actor.Kind != ActorKind.Player;
         }
 
         public static bool TryGetGroundItemApproachDirection(

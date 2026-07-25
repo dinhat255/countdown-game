@@ -25,8 +25,12 @@ namespace CountdownGame.Tests
         public void ValidMovementPreventsManaRestoreButRejectedMovementKeepsEligibility()
         {
             var moved = CreateSimulation(new GridCoord(0, 0), 5, 2);
+            moved.EquipActiveSkill(0, SkillIds.Ward);
             moved.StartBeat();
             Assert.That(moved.TryPlayerMove(GridDirection.Right).Succeeded, Is.True);
+            Assert.That(moved.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.Move));
+            Assert.That(moved.TryUseSkill(0).FailureReason,
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
             moved.EndPlayerPhase();
             Assert.That(moved.Run.CurrentMana, Is.EqualTo(3));
 
@@ -56,6 +60,14 @@ namespace CountdownGame.Tests
             Assert.That(simulation.Player.PlayerMovedThisBeat, Is.True);
             Assert.That(simulation.Run.Wc, Is.EqualTo(22));
             Assert.That(simulation.Run.MovementPressure, Is.EqualTo(2));
+            Assert.That(simulation.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.Dash));
+            Assert.That(
+                simulation.TryPlayerMove(GridDirection.Right).FailureReason,
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
+            Assert.That(
+                simulation.TryUseSkill(1).FailureReason,
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.Skills.ActiveSlots[1], Is.EqualTo(SkillIds.Ward));
             simulation.EndPlayerPhase();
             Assert.That(simulation.Run.CurrentMana, Is.EqualTo(2));
         }
@@ -76,6 +88,8 @@ namespace CountdownGame.Tests
             var expensive = simulation.TryUseSkill(1);
             Assert.That(expensive.FailureReason, Is.EqualTo(SkillUseFailureReason.InsufficientMana));
             Assert.That(simulation.Skills.ActiveSlots[1], Is.EqualTo(SkillIds.Freeze));
+            simulation.EquipActiveSkill(2, SkillIds.Ward);
+            Assert.That(simulation.TryUseSkill(2).Succeeded, Is.True);
             simulation.EndPlayerPhase();
             var wrongPhase = simulation.TryUseSkill(0);
             Assert.That(wrongPhase.FailureReason, Is.EqualTo(SkillUseFailureReason.WrongPhase));
@@ -118,9 +132,87 @@ namespace CountdownGame.Tests
 
             Assert.That(simulation.TryUseSkill(0).Succeeded, Is.True);
             Assert.That(snipeTarget.Health, Is.EqualTo(1));
+            Assert.That(simulation.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.Skill));
+            Assert.That(simulation.TryUseSkill(1).FailureReason,
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.Skills.ActiveSlots[1], Is.EqualTo(SkillIds.Shockwave));
+            simulation.EndPlayerPhase(true);
+            simulation.StartBeat();
             Assert.That(simulation.TryUseSkill(1).Succeeded, Is.True);
             Assert.That(adjacent.Health, Is.EqualTo(1));
             Assert.That(player.PlayerMovedThisBeat, Is.False);
+        }
+
+        [Test]
+        public void AttackKillsSelectedCardinalAdjacentEnemyWithoutMovingOrChangingWc()
+        {
+            var grid = new GridState(4, 4);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(1, 1));
+            var adjacent = new ActorState(2, 2, ActorKind.Thrower, new GridCoord(1, 2));
+            var diagonal = new ActorState(3, 3, ActorKind.Runner, new GridCoord(2, 2));
+            grid.AddActor(player);
+            grid.AddActor(adjacent);
+            grid.AddActor(diagonal);
+            var events = new RecordingEventSink();
+            var simulation = new GameSimulation(
+                grid, player, new RunState(20), 4, events: events);
+            simulation.EquipActiveSkill(0, SkillIds.Dash);
+            simulation.StartBeat();
+
+            Assert.That(simulation.TryPlayerAttack(adjacent.Position), Is.True);
+            Assert.That(adjacent.IsAlive, Is.False);
+            Assert.That(adjacent.Health, Is.Zero);
+            Assert.That(diagonal.IsAlive, Is.True);
+            Assert.That(player.Position, Is.EqualTo(new GridCoord(1, 1)));
+            Assert.That(player.PlayerMovedThisBeat, Is.False);
+            Assert.That(player.Facing, Is.EqualTo(GridDirection.Up));
+            Assert.That(simulation.Run.Wc, Is.EqualTo(20));
+            Assert.That(simulation.PlayerAttackedThisBeat, Is.True);
+            Assert.That(simulation.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.Attack));
+            Assert.That(simulation.GetAvailablePlayerMoveCells(), Is.Empty);
+            Assert.That(
+                simulation.TryPlayerMove(GridDirection.Left).FailureReason,
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
+            Assert.That(
+                simulation.TryPlayerDash().FailureReason,
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
+            Assert.That(
+                simulation.TryUseSkill(0).FailureReason,
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.Skills.ActiveSlots[0], Is.EqualTo(SkillIds.Dash));
+            Assert.That(simulation.Run.CurrentMana, Is.EqualTo(3));
+            Assert.That(player.Position, Is.EqualTo(new GridCoord(1, 1)));
+            Assert.That(events.Events, Does.Contain("Damage:1:2:5:Attack"));
+            Assert.That(events.Events, Does.Contain("Death:2"));
+
+            simulation.EndPlayerPhase(true);
+
+            Assert.That(simulation.Run.Wc, Is.EqualTo(20));
+            Assert.That(events.Events.Any(value => value.Contains(":NoMove")), Is.False);
+        }
+
+        [Test]
+        public void AttackRejectsNonAdjacentDeadAndWrongPhaseTargetsWithoutMutation()
+        {
+            var grid = new GridState(5, 3);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(0, 1));
+            var distant = new ActorState(2, 2, ActorKind.Runner, new GridCoord(2, 1));
+            var adjacent = new ActorState(3, 3, ActorKind.Jumper, new GridCoord(1, 1));
+            grid.AddActor(player);
+            grid.AddActor(distant);
+            grid.AddActor(adjacent);
+            var simulation = new GameSimulation(grid, player, new RunState(20), 4);
+
+            Assert.That(simulation.TryPlayerAttack(adjacent.Position), Is.False);
+            simulation.StartBeat();
+            Assert.That(simulation.TryPlayerAttack(distant.Position), Is.False);
+            adjacent.ApplyDamage(adjacent.Health);
+            Assert.That(simulation.TryPlayerAttack(adjacent.Position), Is.False);
+            Assert.That(distant.Health, Is.EqualTo(distant.MaxHealth));
+            Assert.That(player.Position, Is.EqualTo(new GridCoord(0, 1)));
+            Assert.That(player.PlayerMovedThisBeat, Is.False);
+            Assert.That(simulation.PlayerAttackedThisBeat, Is.False);
+            Assert.That(simulation.Run.Wc, Is.EqualTo(20));
         }
 
         [Test]
@@ -140,22 +232,34 @@ namespace CountdownGame.Tests
         }
 
         [Test]
-        public void DuplicateWardAndFreezeEffectsAreRejectedWithoutConsumption()
+        public void SuccessfulSkillBlocksOtherSkillsAttackMoveAndDashUntilNextBeat()
         {
             var simulation = CreateSimulation(initialMana: 12, maxMana: 12);
+            var adjacentEnemy = new ActorState(
+                2, 2, ActorKind.Runner, new GridCoord(2, 1));
+            simulation.Grid.AddActor(adjacentEnemy);
             simulation.EquipActiveSkill(0, SkillIds.Ward);
             simulation.EquipActiveSkill(1, SkillIds.Ward);
             simulation.EquipActiveSkill(2, SkillIds.Freeze);
             simulation.StartBeat();
             Assert.That(simulation.TryUseSkill(0).Succeeded, Is.True);
+            Assert.That(simulation.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.Skill));
             Assert.That(simulation.TryUseSkill(1).FailureReason,
-                Is.EqualTo(SkillUseFailureReason.EffectAlreadyActive));
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
             Assert.That(simulation.Skills.ActiveSlots[1], Is.EqualTo(SkillIds.Ward));
+            Assert.That(simulation.TryUseSkill(2).FailureReason,
+                Is.EqualTo(SkillUseFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.TryPlayerMove(GridDirection.Right).FailureReason,
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.TryPlayerDash().FailureReason,
+                Is.EqualTo(MovementFailureReason.ActionAlreadyUsed));
+            Assert.That(simulation.TryPlayerAttack(adjacentEnemy.Position), Is.False);
+            Assert.That(adjacentEnemy.IsAlive, Is.True);
+
+            simulation.EndPlayerPhase(true);
+            simulation.StartBeat();
+            Assert.That(simulation.PlayerActionThisBeat, Is.EqualTo(PlayerActionKind.None));
             Assert.That(simulation.TryUseSkill(2).Succeeded, Is.True);
-            simulation.EquipActiveSkill(0, SkillIds.Freeze);
-            Assert.That(simulation.TryUseSkill(0).FailureReason,
-                Is.EqualTo(SkillUseFailureReason.EffectAlreadyActive));
-            Assert.That(simulation.Skills.ActiveSlots[0], Is.EqualTo(SkillIds.Freeze));
         }
 
         [Test]
