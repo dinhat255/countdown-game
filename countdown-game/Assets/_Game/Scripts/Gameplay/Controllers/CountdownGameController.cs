@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Countdown.Gameplay.Map;
 using CountdownGame.Core;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -20,6 +21,8 @@ namespace CountdownGame.Unity
         [SerializeField] private SkillDropConfig skillDropConfig;
 
         [Header("Scene")]
+        [SerializeField] private MapController mapController;
+        [SerializeField] private bool requireMapController;
         [SerializeField] private Tilemap terrainTilemap;
         [SerializeField] private GridActorView[] actorViews;
         [SerializeField] private Transform spawnPointsRoot;
@@ -36,6 +39,51 @@ namespace CountdownGame.Unity
         public Tilemap TerrainTilemap => terrainTilemap;
         public int TargetingSkillSlot { get; private set; } = -1;
 
+        public bool TryWorldToBoardCell(Vector3 worldPosition, out Vector2Int cell)
+        {
+            MapController source = ResolveMapController();
+            if (source != null)
+            {
+                if (source.TryWorldToCoreCoord(worldPosition, out GridCoord coord))
+                {
+                    cell = new Vector2Int(coord.X, coord.Y);
+                    return true;
+                }
+
+                cell = default;
+                return false;
+            }
+
+            if (terrainTilemap != null)
+            {
+                Vector3Int tileCell = terrainTilemap.WorldToCell(worldPosition);
+                cell = new Vector2Int(tileCell.x, tileCell.y);
+                return true;
+            }
+
+            cell = default;
+            return false;
+        }
+
+        public Vector3 BoardCellToWorld(GridCoord cell)
+        {
+            MapController source = ResolveMapController();
+            if (source != null)
+            {
+                if (source.TryCoreCoordToWorld(cell, out Vector3 mapWorldPosition))
+                {
+                    return mapWorldPosition;
+                }
+            }
+
+            if (terrainTilemap != null)
+            {
+                return terrainTilemap.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
+            }
+
+            return new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
+        }
+
         private void Awake()
         {
             BuildSimulation();
@@ -43,12 +91,11 @@ namespace CountdownGame.Unity
 
         public void BuildSimulation()
         {
-            var grid = new GridState(gridSize.x, gridSize.y, terrainTilemap == null);
-            if (terrainTilemap != null)
+            var grid = BuildGridState();
+            if (grid == null)
             {
-                for (var y = 0; y < gridSize.y; y++)
-                for (var x = 0; x < gridSize.x; x++)
-                    grid.SetWalkable(new GridCoord(x, y), terrainTilemap.HasTile(new Vector3Int(x, y, 0)));
+                _simulation = null;
+                return;
             }
 
             _views.Clear();
@@ -59,14 +106,19 @@ namespace CountdownGame.Unity
                     new GridCoord(view.initialCell.x, view.initialCell.y));
                 grid.AddActor(actor);
                 _views.Add(actor.Id, view);
+                view.Initialize(BoardCellToWorld);
                 view.Present(actor.Position);
             }
 
             if (spawnPointsRoot != null)
             {
                 foreach (Transform child in spawnPointsRoot)
-                    grid.AddSpawnPoint(new GridCoord(
-                        Mathf.FloorToInt(child.position.x), Mathf.FloorToInt(child.position.y)));
+                {
+                    if (TryWorldToSimulationCoord(child.position, out GridCoord spawnPoint))
+                    {
+                        grid.AddSpawnPoint(spawnPoint);
+                    }
+                }
             }
 
             var player = grid.Actors.Single(a => a.Kind == ActorKind.Player);
@@ -191,7 +243,7 @@ namespace CountdownGame.Unity
                 playerMoveHighlightView = GetComponent<PlayerMoveHighlightView>();
             if (playerMoveHighlightView == null)
                 playerMoveHighlightView = gameObject.AddComponent<PlayerMoveHighlightView>();
-            playerMoveHighlightView.Initialize(terrainTilemap);
+            playerMoveHighlightView.Initialize(terrainTilemap, BoardCellToWorld);
         }
 
         private void RefreshPlayerMoveHighlights()
@@ -206,10 +258,7 @@ namespace CountdownGame.Unity
             if (groundSkillItemPrefab == null) return;
             var view = Instantiate(groundSkillItemPrefab, transform);
             var definition = skillCatalog != null ? skillCatalog.Find(item.SkillId) : null;
-            var tileCell = new Vector3Int(item.Cell.X, item.Cell.Y, 0);
-            var cellCenter = terrainTilemap != null
-                ? terrainTilemap.GetCellCenterWorld(tileCell)
-                : new Vector3(item.Cell.X + 0.5f, item.Cell.Y + 0.5f, 0f);
+            var cellCenter = BoardCellToWorld(item.Cell);
             view.Present(
                 item.Id,
                 item.SkillId,
@@ -217,6 +266,70 @@ namespace CountdownGame.Unity
                 cellCenter,
                 definition != null ? definition.icon : null);
             _groundItemViews[item.Id] = view;
+        }
+
+        private GridState BuildGridState()
+        {
+            MapController source = ResolveMapController();
+            if (source != null)
+            {
+                if (source.TryBuildCoreGridState(out GridState mapGrid, out string error))
+                {
+                    gridSize = new Vector2Int(mapGrid.Width, mapGrid.Height);
+                    return mapGrid;
+                }
+
+                if (requireMapController)
+                {
+                    Debug.LogError($"{nameof(CountdownGameController)} requires a valid {nameof(MapController)}: {error}", this);
+                    return null;
+                }
+
+                Debug.LogWarning($"{nameof(CountdownGameController)} falling back to legacy Tilemap grid: {error}", this);
+            }
+            else if (requireMapController)
+            {
+                Debug.LogError($"{nameof(CountdownGameController)} requires a {nameof(MapController)} but none was found.", this);
+                return null;
+            }
+
+            var grid = new GridState(gridSize.x, gridSize.y, terrainTilemap == null);
+            if (terrainTilemap == null)
+            {
+                return grid;
+            }
+
+            for (var y = 0; y < gridSize.y; y++)
+            {
+                for (var x = 0; x < gridSize.x; x++)
+                {
+                    grid.SetWalkable(new GridCoord(x, y), terrainTilemap.HasTile(new Vector3Int(x, y, 0)));
+                }
+            }
+
+            return grid;
+        }
+
+        private bool TryWorldToSimulationCoord(Vector3 worldPosition, out GridCoord coord)
+        {
+            MapController source = ResolveMapController();
+            if (source != null)
+            {
+                return source.TryWorldToCoreCoord(worldPosition, out coord);
+            }
+
+            coord = new GridCoord(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y));
+            return true;
+        }
+
+        private MapController ResolveMapController()
+        {
+            if (mapController == null)
+            {
+                mapController = FindAnyObjectByType<MapController>();
+            }
+
+            return mapController;
         }
     }
 }

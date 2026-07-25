@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using CountdownGame.Core;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -14,11 +15,13 @@ namespace CountdownGame.Unity
 
         private readonly List<SpriteRenderer> _renderers = new List<SpriteRenderer>();
         private Tilemap _terrainTilemap;
+        private Func<GridCoord, Vector3> _cellCenterResolver;
         private Sprite _cellSprite;
 
-        public void Initialize(Tilemap terrainTilemap)
+        public void Initialize(Tilemap terrainTilemap, Func<GridCoord, Vector3> cellCenterResolver = null)
         {
             _terrainTilemap = terrainTilemap;
+            _cellCenterResolver = cellCenterResolver;
             EnsureSprite();
             ApplySorting();
         }
@@ -45,6 +48,8 @@ namespace CountdownGame.Unity
 
         private Vector3 CellCenter(GridCoord cell)
         {
+            if (_cellCenterResolver != null)
+                return _cellCenterResolver(cell);
             if (_terrainTilemap != null)
                 return _terrainTilemap.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
             return new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
