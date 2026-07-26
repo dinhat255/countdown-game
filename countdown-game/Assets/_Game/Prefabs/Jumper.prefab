@@ -84,7 +84,7 @@ SpriteRenderer:
   m_SortingOrder: 10
   m_MaskInteraction: 0
   m_Sprite: {fileID: 2934212829263906640, guid: d481ddf87271143ae8a6f4532f55301e, type: 2}
-  m_Color: {r: 0.75, g: 0.35, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 383ae66205e614b9e887c2497356719c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.GridActorView
   actorId: 3
   spawnId: 3
@@ -127,7 +127,7 @@ Animator:
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_AnimatePhysics: 0
-  m_WarningMessage:
+  m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
