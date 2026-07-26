@@ -1,8 +1,11 @@
 using System.Collections;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using CountdownGame.Core;
+using CountdownGame.Unity;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace CountdownGame.Tests
@@ -50,6 +53,57 @@ namespace CountdownGame.Tests
 
             Assert.That(events.Events.Any(e => e.StartsWith("Spawn:")), Is.True);
             Assert.That(simulation.Run.BeatNumber, Is.EqualTo(3));
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator SpawnedEnemyCreatesAVisibleActorViewAtItsOccupiedCell()
+        {
+            var controllerObject = new GameObject("Spawn View Test Controller");
+            controllerObject.SetActive(false);
+            var controller = controllerObject.AddComponent<CountdownGameController>();
+            var templateObject = new GameObject("Jumper View Template");
+            var renderer = templateObject.AddComponent<SpriteRenderer>();
+            var texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, Color.magenta);
+            texture.Apply();
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, 1f, 1f),
+                new Vector2(0.5f, 0.5f),
+                1f);
+            renderer.sprite = sprite;
+            var template = templateObject.AddComponent<GridActorView>();
+            template.actorId = 3;
+            template.spawnId = 3;
+            template.actorKind = ActorKind.Jumper;
+
+            var viewsField = typeof(CountdownGameController).GetField(
+                "_views",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(viewsField, Is.Not.Null);
+            var views = (Dictionary<int, GridActorView>)viewsField.GetValue(controller);
+            views.Add(template.actorId, template);
+            var spawned = new ActorState(
+                1000,
+                1000,
+                ActorKind.Jumper,
+                new GridCoord(4, 5));
+
+            controller.EnemySpawned(spawned);
+
+            Assert.That(views.TryGetValue(spawned.Id, out var spawnedView), Is.True);
+            Assert.That(spawnedView, Is.Not.SameAs(template));
+            Assert.That(spawnedView.gameObject.activeSelf, Is.True);
+            Assert.That(spawnedView.actorKind, Is.EqualTo(ActorKind.Jumper));
+            Assert.That(spawnedView.initialCell, Is.EqualTo(new Vector2Int(4, 5)));
+            Assert.That(spawnedView.GetComponent<SpriteRenderer>().sprite, Is.SameAs(sprite));
+
+            Object.Destroy(spawnedView.gameObject);
+            Object.Destroy(templateObject);
+            Object.Destroy(controllerObject);
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
             yield return null;
         }
 
