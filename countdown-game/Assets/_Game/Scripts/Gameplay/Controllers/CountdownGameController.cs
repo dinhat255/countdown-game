@@ -140,8 +140,12 @@ namespace CountdownGame.Unity
         }
 
         public MovementResult Move(GridDirection direction) => _simulation.TryPlayerMove(direction);
-        public bool Attack(Vector2Int cell) =>
-            _simulation.TryPlayerAttack(new GridCoord(cell.x, cell.y));
+        public bool Attack(Vector2Int cell)
+        {
+            bool succeeded = _simulation.TryPlayerAttack(new GridCoord(cell.x, cell.y));
+            if (succeeded) PlayPlayerAnimation("Attack");
+            return succeeded;
+        }
         public SkillUseResult Dash()
         {
             var slot = _simulation.Skills.ActiveSlots
@@ -169,7 +173,11 @@ namespace CountdownGame.Unity
         public void MovementResolved(MovementResult result)
         {
             if (result.Succeeded && _views.TryGetValue(result.ActorId, out var view))
+            {
+                view.FaceMovement(result.Origin, result.Landing);
                 view.Present(result.Landing);
+                view.PlayAnimation("Move");
+            }
             RefreshPlayerMoveHighlights();
         }
 
@@ -187,8 +195,35 @@ namespace CountdownGame.Unity
                 view.gameObject.SetActive(false);
             RefreshPlayerMoveHighlights();
         }
-        public void EnemySpawned(ActorState enemy) =>
+        public void EnemySpawned(ActorState enemy)
+        {
+            if (enemy == null)
+            {
+                Debug.LogError("[Countdown] Cannot present a null spawned enemy.", this);
+                return;
+            }
+
+            var template = _views.Values.FirstOrDefault(view => view.actorKind == enemy.Kind);
+            if (template == null)
+            {
+                Debug.LogError(
+                    $"[Countdown] Spawned {enemy.Kind} #{enemy.Id} has no matching actor view template.",
+                    this);
+                return;
+            }
+
+            var view = Instantiate(template, template.transform.parent);
+            view.name = $"{enemy.Kind} {enemy.Id}";
+            view.actorId = enemy.Id;
+            view.spawnId = enemy.SpawnId;
+            view.actorKind = enemy.Kind;
+            view.initialCell = new Vector2Int(enemy.Position.X, enemy.Position.Y);
+            view.Initialize(BoardCellToWorld);
+            view.Present(enemy.Position);
+            _views.Add(enemy.Id, view);
+
             Debug.Log($"[Countdown] Spawned {enemy.Kind} #{enemy.Id} at {enemy.Position}");
+        }
 
         public void TelegraphChanged(int enemyId, string kind, bool active, bool paused)
         {
@@ -205,8 +240,21 @@ namespace CountdownGame.Unity
                 telegraphView.Show(new Vector2Int(landing.Value.X, landing.Value.Y), paused);
         }
 
-        public void EnemyDecisionResolved(EnemyDecision decision) =>
+        public void EnemyDecisionResolved(EnemyDecision decision)
+        {
+            switch (decision.Kind)
+            {
+                case EnemyDecisionKind.Attack:
+                case EnemyDecisionKind.ResolveJump:
+                    PlayActorAnimation(decision.EnemyId, "Attack");
+                    break;
+                case EnemyDecisionKind.ResolveThrow:
+                    PlayActorAnimation(decision.EnemyId, "Throw");
+                    break;
+            }
+
             Debug.Log($"[Countdown] Enemy {decision.EnemyId}: {decision.Kind}");
+        }
 
         public void PhaseChanged(BeatPhase phase)
         {
@@ -218,6 +266,7 @@ namespace CountdownGame.Unity
             Debug.Log($"[Countdown] Mana {previousValue} -> {currentValue} ({cause})");
         public void SkillUsed(int slotIndex, string skillId, int manaSpent)
         {
+            PlayPlayerAnimation("Skill");
             Debug.Log($"[Countdown] Used {skillId} from slot {slotIndex} for {manaSpent} mana");
             RefreshPlayerMoveHighlights();
         }
@@ -238,8 +287,11 @@ namespace CountdownGame.Unity
         }
         public void PickupPending(string skillId) =>
             Debug.Log($"[Countdown] Pickup pending: {skillId}");
-        public void PickupResolved(string skillId, PickupDecisionKind decision) =>
+        public void PickupResolved(string skillId, PickupDecisionKind decision)
+        {
+            PlayPlayerAnimation("Pickup");
             Debug.Log($"[Countdown] Pickup {skillId}: {decision}");
+        }
         public void DamageApplied(int sourceId, int targetId, int amount, string cause) =>
             Debug.Log($"[Countdown] Damage {sourceId} -> {targetId}: {amount} ({cause})");
         public void WardChanged(bool armed) =>
@@ -260,6 +312,18 @@ namespace CountdownGame.Unity
         {
             if (playerMoveHighlightView == null || _simulation == null) return;
             playerMoveHighlightView.Present(_simulation.GetAvailablePlayerMoveCells());
+        }
+
+        private void PlayPlayerAnimation(string stateName)
+        {
+            var playerView = _views.Values.FirstOrDefault(view => view.actorKind == ActorKind.Player);
+            playerView?.PlayAnimation(stateName);
+        }
+
+        private void PlayActorAnimation(int actorId, string stateName)
+        {
+            if (_views.TryGetValue(actorId, out var view))
+                view.PlayAnimation(stateName);
         }
 
         private void PresentGroundItem(GroundSkillItem item)
