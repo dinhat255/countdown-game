@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!29 &1
 OcclusionCullingSettings:
@@ -180,21 +180,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 855abb3dc2f74784bc41213357f3224e, type: 3}
---- !u!1 &1201 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1900, guid: 855abb3dc2f74784bc41213357f3224e, type: 3}
-  m_PrefabInstance: {fileID: 1200}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &1202 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1901, guid: 855abb3dc2f74784bc41213357f3224e, type: 3}
-  m_PrefabInstance: {fileID: 1200}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1203 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1802, guid: 855abb3dc2f74784bc41213357f3224e, type: 3}
   m_PrefabInstance: {fileID: 1200}
   m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52119a4e41954c1caae054a54498379e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &196764183
 GameObject:
   m_ObjectHideFlags: 0
@@ -223,7 +219,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 383ae66205e614b9e887c2497356719c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.GridActorView
   actorId: 4
   spawnId: 4
@@ -389,7 +385,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 383ae66205e614b9e887c2497356719c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.GridActorView
 --- !u!1 &652056581
 GameObject:
@@ -419,7 +415,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2898f6415554f46b3a29bc948ce0be24, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.PlayerInputAdapter
   controller: {fileID: 652056583}
   boardCamera: {fileID: 0}
@@ -434,7 +430,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 571ea415dc0e94d118048fc26f82588a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.CountdownGameController
   runSeed: 12345
   initialWc: 12
@@ -500,7 +496,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4659aa015321f4706b360db0c41be381, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.TelegraphView
   marker: {fileID: 766424238}
 --- !u!212 &766424238
@@ -703,7 +699,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 383ae66205e614b9e887c2497356719c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.GridActorView
   actorId: 3
   spawnId: 3
@@ -1736,7 +1732,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 383ae66205e614b9e887c2497356719c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: CountdownGame.Runtime::CountdownGame.Unity.GridActorView
   actorId: 2
   spawnId: 2
@@ -1894,6 +1890,34 @@ PrefabInstance:
       propertyPath: m_ReferenceResolution.y
       value: 1080
       objectReference: {fileID: 0}
+    - target: {fileID: 2701, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 488
+      objectReference: {fileID: 0}
+    - target: {fileID: 2701, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -36
+      objectReference: {fileID: 0}
+    - target: {fileID: 2704, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_Colors.m_NormalColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2704, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_Colors.m_NormalColor.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2704, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_Colors.m_NormalColor.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2921, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 345.1819
+      objectReference: {fileID: 0}
+    - target: {fileID: 2921, guid: 50000000000000000000000000000001, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 102.316315
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1914,4 +1938,4 @@ SceneRoots:
   - {fileID: 766424239}
   - {fileID: 652056584}
   - {fileID: 7000000000000000001}
-  - {fileID: 1202}
+  - {fileID: 1200}
