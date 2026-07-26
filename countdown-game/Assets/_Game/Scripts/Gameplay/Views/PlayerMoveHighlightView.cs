@@ -12,23 +12,26 @@ namespace CountdownGame.Unity
         [SerializeField] private Color availableColor = new Color(0.15f, 0.9f, 1f, 0.42f);
         [SerializeField, Range(0.5f, 1f)] private float cellScale = 0.86f;
         [SerializeField] private int sortingOrderOffset = 1;
+        [SerializeField] private Sprite cellSprite;
 
         private readonly List<SpriteRenderer> _renderers = new List<SpriteRenderer>();
         private Tilemap _terrainTilemap;
         private Func<GridCoord, Vector3> _cellCenterResolver;
-        private Sprite _cellSprite;
 
-        public void Initialize(Tilemap terrainTilemap, Func<GridCoord, Vector3> cellCenterResolver = null)
+        public void Initialize(
+            Tilemap terrainTilemap,
+            Func<GridCoord, Vector3> cellCenterResolver = null,
+            Sprite overrideCellSprite = null)
         {
             _terrainTilemap = terrainTilemap;
             _cellCenterResolver = cellCenterResolver;
-            EnsureSprite();
+            if (overrideCellSprite != null)
+                cellSprite = overrideCellSprite;
             ApplySorting();
         }
 
         public void Present(IReadOnlyList<GridCoord> cells)
         {
-            EnsureSprite();
             var visibleCount = cells?.Count ?? 0;
             EnsureRendererCount(visibleCount);
 
@@ -62,23 +65,11 @@ namespace CountdownGame.Unity
                 var cellObject = new GameObject($"Available Move {_renderers.Count + 1}");
                 cellObject.transform.SetParent(transform, false);
                 var renderer = cellObject.AddComponent<SpriteRenderer>();
-                renderer.sprite = _cellSprite;
+                renderer.sprite = cellSprite;
                 renderer.color = availableColor;
                 _renderers.Add(renderer);
             }
             ApplySorting();
-        }
-
-        private void EnsureSprite()
-        {
-            if (_cellSprite != null) return;
-            var texture = Texture2D.whiteTexture;
-            _cellSprite = Sprite.Create(
-                texture,
-                new Rect(0f, 0f, texture.width, texture.height),
-                new Vector2(0.5f, 0.5f),
-                texture.width);
-            _cellSprite.name = "Runtime Player Move Highlight";
         }
 
         private void ApplySorting()
@@ -100,11 +91,5 @@ namespace CountdownGame.Unity
             }
         }
 
-        private void OnDestroy()
-        {
-            if (_cellSprite == null) return;
-            if (Application.isPlaying) Destroy(_cellSprite);
-            else DestroyImmediate(_cellSprite);
-        }
     }
 }

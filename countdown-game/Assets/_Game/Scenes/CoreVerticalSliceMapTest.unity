@@ -453,6 +453,7 @@ MonoBehaviour:
   telegraphView: {fileID: 766424237}
   groundSkillItemPrefab: {fileID: 1002, guid: 40000000000000000000000000000001, type: 3}
   playerMoveHighlightView: {fileID: 0}
+  playerMoveHighlightSprite: {fileID: 2934212829263906640, guid: d481ddf87271143ae8a6f4532f55301e, type: 2}
 --- !u!4 &652056584
 Transform:
   m_ObjectHideFlags: 0
@@ -1892,11 +1893,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2701, guid: 50000000000000000000000000000001, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 488
+      value: -18
       objectReference: {fileID: 0}
     - target: {fileID: 2701, guid: 50000000000000000000000000000001, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -36
+      value: -18
       objectReference: {fileID: 0}
     - target: {fileID: 2704, guid: 50000000000000000000000000000001, type: 3}
       propertyPath: m_Colors.m_NormalColor.b
@@ -1912,11 +1913,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2921, guid: 50000000000000000000000000000001, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 345.1819
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 2921, guid: 50000000000000000000000000000001, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 102.316315
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

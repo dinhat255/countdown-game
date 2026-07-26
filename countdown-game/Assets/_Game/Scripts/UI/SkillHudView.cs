@@ -53,7 +53,6 @@ namespace CountdownGame.UI
         private readonly List<Image> _wcSegments = new List<Image>();
         private int _lastBeatNumber = -1;
         private float _beatCountdownElapsed;
-        private static Sprite _fallbackFillSprite;
 
         private void Awake()
         {
@@ -228,7 +227,6 @@ namespace CountdownGame.UI
         {
             if (image == null) return;
             image.color = color;
-            EnsureFillImageDrawable(image);
             image.fillAmount = Mathf.Clamp01(value);
             image.gameObject.SetActive(image.fillAmount > 0.001f);
         }
@@ -261,7 +259,6 @@ namespace CountdownGame.UI
             beatCounterFill.fillMethod = Image.FillMethod.Horizontal;
             beatCounterFill.fillOrigin = (int)Image.OriginHorizontal.Left;
             beatCounterFill.fillClockwise = true;
-            EnsureFillImageDrawable(beatCounterFill);
             beatCounterFill.fillAmount = fill;
             beatCounterFill.gameObject.SetActive(fill > 0.001f);
         }
@@ -318,7 +315,6 @@ namespace CountdownGame.UI
                 segment.fillMethod = Image.FillMethod.Vertical;
                 segment.fillOrigin = (int)Image.OriginVertical.Bottom;
                 segment.fillClockwise = true;
-                EnsureFillImageDrawable(segment);
                 segment.fillAmount = segmentFill;
                 segment.color = segmentFill > 0.001f ? wcCounterColor : emptyWcCounterColor;
             }
@@ -408,16 +404,6 @@ namespace CountdownGame.UI
         }
 
         private static int Length<T>(T[] values) => values != null ? values.Length : 0;
-
-        private static void EnsureFillImageDrawable(Image image)
-        {
-            if (image == null || image.sprite != null) return;
-            _fallbackFillSprite ??= Sprite.Create(
-                Texture2D.whiteTexture,
-                new Rect(0f, 0f, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
-                new Vector2(0.5f, 0.5f));
-            image.sprite = _fallbackFillSprite;
-        }
     }
 
     [Serializable]

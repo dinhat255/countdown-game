@@ -29,6 +29,7 @@ namespace CountdownGame.Unity
         [SerializeField] private TelegraphView telegraphView;
         [SerializeField] private GroundSkillItemView groundSkillItemPrefab;
         [SerializeField] private PlayerMoveHighlightView playerMoveHighlightView;
+        [SerializeField] private Sprite playerMoveHighlightSprite;
 
         private readonly Dictionary<int, GridActorView> _views = new Dictionary<int, GridActorView>();
         private readonly Dictionary<int, GroundSkillItemView> _groundItemViews =
@@ -252,7 +253,7 @@ namespace CountdownGame.Unity
                 playerMoveHighlightView = GetComponent<PlayerMoveHighlightView>();
             if (playerMoveHighlightView == null)
                 playerMoveHighlightView = gameObject.AddComponent<PlayerMoveHighlightView>();
-            playerMoveHighlightView.Initialize(terrainTilemap, BoardCellToWorld);
+            playerMoveHighlightView.Initialize(terrainTilemap, BoardCellToWorld, playerMoveHighlightSprite);
         }
 
         private void RefreshPlayerMoveHighlights()
