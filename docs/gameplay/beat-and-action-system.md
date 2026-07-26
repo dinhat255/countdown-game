@@ -10,6 +10,16 @@ Player Phase → Enemy Phase → End-of-beat Update
 
 Player resolve tối đa một valid action trong beat: standard Move, Dash, Attack hoặc một Active skill. Enemy vẫn resolve tối đa một self-directed valid movement theo rule riêng. Runner Move, Jumper Move/Jump và Thrower Move dùng cap của từng enemy. Throw relocation không phải self-movement và không đổi movement flag của target.
 
+Player Phase không có input End Beat. Timer tự kết thúc phase theo WC hiện tại:
+
+| WC hiện tại | Thời lượng Player Phase |
+| --- | ---: |
+| `WC > 10` | `2,4s` |
+| `5 < WC ≤ 10` | `1,8s` |
+| `0 < WC ≤ 5` | `1,6s` |
+
+Mốc `WC = 10` thuộc tier `1,8s`; `WC = 5` thuộc tier `1,6s`. Nếu WC đổi trong Player Phase, duration áp dụng tier mới ngay mà không reset elapsed time. Timer chỉ chạy trong Player Phase gameplay đang active, pause khi dialog/replacement modal chặn gameplay, và reset ở đầu beat mới. `WC ≤ 0` được xử lý bởi Victory ở end-of-beat, không mở beat gameplay mới.
+
 ## Validate trước resolve
 
 Candidate được kiểm tra đầy đủ trước mutation:
@@ -62,6 +72,8 @@ Attack cooldown và environmental hazard timers vẫn theo rule riêng đã mô 
 ## Input buffer
 
 Chỉ buffer action kế tiếp và luôn validate lại trước resolve. Invalid input bị bỏ nhưng player có thể nhập candidate khác. Sau bất kỳ valid player action nào, mọi input skill/Attack/Move/Dash khác bị khóa tới beat sau.
+
+Beat timeout không phải player action, không đổi `PlayerMovedThisBeat` và không hoàn tác action đã resolve. Khi timer hết, phase đi qua cùng canonical Enemy Phase và end-of-beat update.
 
 ## Tài liệu liên quan
 

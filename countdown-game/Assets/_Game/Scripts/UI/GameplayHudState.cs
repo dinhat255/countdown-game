@@ -23,10 +23,11 @@ namespace CountdownGame.UI
         public float ManaCounterFill { get; private set; }
         public float NoMoveCounterFill { get; private set; }
         public float BombCounterFill { get; private set; }
+        public float BeatDurationSeconds { get; private set; }
         public bool ContextVisible { get; private set; }
         public bool ReplacementVisible { get; private set; }
         public bool PendingIsActiveSkill { get; private set; }
-        public bool EndBeatInteractable { get; private set; }
+        public bool BeatTimerActive { get; private set; }
         public ActiveSkillSlotState[] ActiveSlots { get; private set; }
 
         public static GameplayHudState From(CountdownGameController controller)
@@ -59,9 +60,11 @@ namespace CountdownGame.UI
                 ManaCounterFill = CounterRatio(simulation.Run.CurrentMana, simulation.Run.MaxMana),
                 NoMoveCounterFill = simulation.Player.PlayerMovedThisBeat ? 0f : 1f,
                 BombCounterFill = BuildBombCounterFill(simulation),
+                BeatDurationSeconds = BeatDurationForWc(simulation.Run.Wc),
                 ReplacementVisible = simulation.Skills.HasPendingPickup,
                 PendingIsActiveSkill = simulation.Skills.PendingCategory == SkillCategory.Active,
-                EndBeatInteractable = simulation.Phase == BeatPhase.Player
+                BeatTimerActive =
+                    simulation.Phase == BeatPhase.Player && !simulation.Skills.HasPendingPickup
             };
 
             state.ActiveSlots = BuildActiveSlots(simulation, controller.TargetingSkillSlot);
@@ -91,10 +94,11 @@ namespace CountdownGame.UI
                 ManaCounterFill = 0f,
                 NoMoveCounterFill = 0f,
                 BombCounterFill = 0f,
+                BeatDurationSeconds = 0f,
                 ContextVisible = true,
                 ReplacementVisible = false,
                 PendingIsActiveSkill = false,
-                EndBeatInteractable = false,
+                BeatTimerActive = false,
                 ActiveSlots = new[]
                 {
                     ActiveSkillSlotState.Empty(0, "No simulation"),
@@ -216,6 +220,13 @@ namespace CountdownGame.UI
             if (simulation.Bombs.Count == 0) return 0f;
             var nearestFuse = simulation.Bombs.Min(bomb => bomb.FuseRemaining);
             return CounterRatio(nearestFuse, 2);
+        }
+
+        internal static float BeatDurationForWc(int wc)
+        {
+            if (wc > 10) return 2.4f;
+            if (wc > 5) return 1.8f;
+            return 1.6f;
         }
 
         private static float CounterRatio(int value, int maximum)

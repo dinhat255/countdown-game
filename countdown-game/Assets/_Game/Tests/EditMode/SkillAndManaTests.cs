@@ -1,11 +1,22 @@
 using System.Linq;
 using CountdownGame.Core;
+using CountdownGame.UI;
 using NUnit.Framework;
 
 namespace CountdownGame.Tests
 {
     public sealed class SkillAndManaTests
     {
+        [TestCase(11, 2.4f)]
+        [TestCase(10, 1.8f)]
+        [TestCase(6, 1.8f)]
+        [TestCase(5, 1.6f)]
+        [TestCase(1, 1.6f)]
+        public void BeatDurationUsesCurrentWcTier(int wc, float expectedSeconds)
+        {
+            Assert.That(GameplayHudState.BeatDurationForWc(wc), Is.EqualTo(expectedSeconds));
+        }
+
         [Test]
         public void ManaStartsAtThreeClampsAtSixAndMeditationRestoresThree()
         {

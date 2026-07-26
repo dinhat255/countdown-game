@@ -15,7 +15,7 @@ Map là grid walkable/non-walkable với actor, spawn cell và non-blocking over
 
 HUD luôn hiển thị:
 
-- Phase, timer, End Beat và `PlayerMovedThisBeat`.
+- Phase, WC-tiered beat timer và `PlayerMovedThisBeat`; không có nút End Beat.
 - WC current/baseline và phase thresholds.
 - Mana `current/6` cùng predicted `+2` hoặc `+3` nếu no-move.
 - Ba Active consumable slot: icon, cost, targeting state và invalid reason.
@@ -32,6 +32,16 @@ Moved: No
 ```
 
 Invalid action hiển thị failure reason mà không preview resource/slot mutation.
+
+Beat timer tự kết thúc Player Phase theo WC hiện tại:
+
+| WC hiện tại | Timer |
+| --- | ---: |
+| `WC > 10` | `2,4s` |
+| `5 < WC ≤ 10` | `1,8s` |
+| `0 < WC ≤ 5` | `1,6s` |
+
+Exact `10` dùng `1,8s`; exact `5` dùng `1,6s`. Nếu WC đổi giữa Player Phase, fill dùng duration tier mới ngay, giữ nguyên elapsed time. Timer pause khi replacement/dialog modal chặn gameplay, reset ở beat mới và không chạy ngoài Player Phase.
 
 ## Ground item và replacement UI
 

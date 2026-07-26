@@ -52,9 +52,9 @@ Attack là stationary action chủ động và không dùng Active slot. Success
 
 Ở end-of-beat, successful Attack vẫn tăng Standing Streak và hồi no-move Mana nhưng bỏ qua WC reduction. Attack vì vậy không làm giảm WC trực tiếp hoặc qua no-move update.
 
-## End Beat và UI
+## Beat timeout và UI
 
-End Beat không hoàn tác action. UI player cần hiện:
+Player Phase tự kết thúc theo timer WC-tiered; player không có input hoặc nút End Beat. Timeout không hoàn tác action đã resolve và giữ nguyên movement/action flags cho canonical end-of-beat update. UI player cần hiện:
 
 - Mana current/max và predicted no-move restore.
 - Movement-used state và valid/invalid Move/Dash path.

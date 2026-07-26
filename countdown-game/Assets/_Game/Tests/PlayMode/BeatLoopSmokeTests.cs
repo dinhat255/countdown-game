@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using CountdownGame.Core;
+using CountdownGame.UI;
 using CountdownGame.Unity;
 using NUnit.Framework;
 using UnityEngine;
@@ -12,6 +13,42 @@ namespace CountdownGame.Tests
 {
     public sealed class BeatLoopSmokeTests
     {
+        [UnityTest]
+        public IEnumerator HudTimerAutomaticallyEndsThePlayerPhase()
+        {
+            var grid = new GridState(3, 3);
+            var player = new ActorState(1, 1, ActorKind.Player, new GridCoord(1, 1));
+            grid.AddActor(player);
+            var simulation = new GameSimulation(grid, player, new RunState(11), 123);
+            simulation.StartBeat();
+
+            var controllerObject = new GameObject("Auto Beat Timer Controller");
+            controllerObject.SetActive(false);
+            var controller = controllerObject.AddComponent<CountdownGameController>();
+            var simulationField = typeof(CountdownGameController).GetField(
+                "_simulation",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(simulationField, Is.Not.Null);
+            simulationField.SetValue(controller, simulation);
+
+            var hudObject = new GameObject("Auto Beat Timer HUD");
+            hudObject.SetActive(false);
+            var hud = hudObject.AddComponent<SkillHudView>();
+            var controllerField = typeof(SkillHudView).GetField(
+                "controller",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(controllerField, Is.Not.Null);
+            controllerField.SetValue(hud, controller);
+            hudObject.SetActive(true);
+
+            yield return new WaitForSeconds(2.5f);
+
+            Assert.That(simulation.Run.BeatNumber, Is.EqualTo(2));
+            Assert.That(simulation.Phase, Is.EqualTo(BeatPhase.Player));
+            Object.Destroy(hudObject);
+            Object.Destroy(controllerObject);
+        }
+
         [UnityTest]
         public IEnumerator CompleteBeatLoopSupportsMoveDashInitiativeTelegraphsFreezeAndSpawn()
         {

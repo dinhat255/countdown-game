@@ -7,6 +7,7 @@
 Quy tắc nền:
 
 - Một nhịp gồm Player Phase, Enemy Phase và end-of-beat update.
+- Player Phase tự kết thúc theo timer từ WC hiện tại: `2,4s` khi `WC > 10`, `1,8s` khi `5 < WC ≤ 10`, và `1,6s` khi `0 < WC ≤ 5`; không có input hoặc nút End Beat.
 - Player resolve tối đa một valid action mỗi beat: standard Move, Dash, Attack hoặc một Active skill. Invalid candidate không consume action.
 - Mỗi entity resolve tối đa một self-directed valid movement trong mỗi nhịp.
 - Player tự đổi vị trí bằng standard Move hoặc Dash hợp lệ; cả hai dùng chung cap một self-movement/beat.
@@ -50,7 +51,7 @@ Quy tắc nền:
 | Turret | Hazard neutral đặt trên wall/non-walkable |
 | Bomb skill fuse | Timer của Bomb đã đặt, tick mỗi beat sau khi consumable Bomb bị dùng |
 | Stationary action | Action không đổi vị trí actor hoặc target |
-| End Beat | Player kết thúc Player Phase |
+| Beat timeout | Timer tự kết thúc Player Phase theo tier WC hiện tại |
 | WC | Win Condition Cooldown |
 | `LowestWCReached` | WC thấp nhất, dùng cho phase đi xuống |
 | `HighestWCReached` | WC cao nhất, dùng cho dialog đi lên |

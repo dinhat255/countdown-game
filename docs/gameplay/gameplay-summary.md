@@ -16,6 +16,20 @@ Player Phase → Enemy Phase → End-of-beat Update
 
 Player chỉ có một valid action/beat: standard Move, Dash, Attack hoặc một Active skill. Mỗi enemy chỉ có một self-directed valid movement/beat theo rule riêng. Invalid candidate không mutate state, tiêu resource hoặc consume player action.
 
+Player Phase tự kết thúc; không có input hoặc nút End Beat.
+
+| WC hiện tại | Thời lượng Player Phase |
+| --- | ---: |
+| `WC > 10` | `2,4s` |
+| `5 < WC ≤ 10` | `1,8s` |
+| `0 < WC ≤ 5` | `1,6s` |
+
+`WC = 10` dùng `1,8s`; `WC = 5` dùng `1,6s`.
+Nếu WC đổi trong Player Phase, timer chuyển tier ngay và không reset elapsed time.
+Timer chỉ chạy trong Player Phase active.
+Replacement/dialog modal pause timer; beat mới reset timer.
+Timeout không phải action và không hoàn tác action đã resolve.
+
 Nếu player không valid self-move:
 
 - Standing Streak tăng; WC giảm trừ beat có successful player Attack.
@@ -27,6 +41,21 @@ Nếu player valid Move/Dash:
 - `PlayerMovedThisBeat = true`, streak reset và không hồi Mana.
 - Move tạo Move Pressure.
 - Dash dùng consumable skill, tốn `1` Mana, đi ba ô, cộng `2 WC` và tạo Dash Pressure.
+
+## Validate và action guard
+
+Mọi candidate được validate đầy đủ trước mutation:
+
+- Phase và action guard.
+- Mana, slot, target và range.
+- Movement path, endpoint, terrain và occupancy.
+- Per-beat self-movement cap.
+
+Valid action đầu tiên consume player action của beat.
+Invalid candidate không consume action nên player có thể chọn lại trước timeout.
+Stationary skill và Attack giữ `PlayerMovedThisBeat = false`.
+Chỉ valid standard Move hoặc Dash set flag true.
+Targeting UI chưa resolve không phải action và không reset timer.
 
 ## Mana, slot và starter skills
 
@@ -53,6 +82,13 @@ Sau enemy spawn ở completed beat `3, 6, 9…`, game thử drop một item bằ
 
 Item là non-blocking overlay. Chỉ landing của valid player Move/Dash nhặt item. Active vào empty Active slot đầu tiên; Passive vào empty Passive slot. Nếu matching type đầy, item biến mất và player replace đúng loại hoặc discard. Pending Active auto-fill nếu slot trống trước panel.
 
+Pickup replacement dùng đúng category:
+
+- Active chỉ replace Active hoặc discard.
+- Passive chỉ replace Passive hoặc discard.
+- Pending Active tự fill nếu slot trống trước khi panel mở.
+- Victory hủy pending UI.
+
 ## Combat và hazards
 
 Enemy maximum HP cấu hình theo Runner/Jumper/Thrower. Snipe, Shockwave và Bomb gây damage. Player Attack chọn và giết một enemy ở ô cardinal kề bên qua shared damage/death resolver. Attack không đổi vị trí hoặc movement flag, nhưng consume player action nên player không thể dùng skill, Attack, Move hoặc Dash khác trong cùng beat. Successful Attack cũng chặn no-move WC reduction của beat đó.
@@ -65,6 +101,22 @@ Bomb placement order → Environmental Bomb stable order → Turret stable order
 
 Victory short-circuit enemy spawn, skill drop và pending UI.
 
+End-of-beat canonical:
+
+1. Hoàn tất hoặc Freeze-skip Enemy Phase.
+2. Apply no-move WC/streak và Mana restore.
+3. Tick Bomb fuse và status.
+4. Resolve due Bomb, Environmental Bomb, Turret.
+5. Cập nhật Lowest/Highest WC và phase.
+6. Victory short-circuit nếu `WC ≤ 0`.
+7. Nếu chưa thắng, tick/spawn rồi thử skill drop.
+8. Resolve UI priority trước beat mới.
+
+Environmental Bomb và Turret là neutral hazards.
+Freeze không pause hazard tick/resolve/fire.
+Hazard hit player cộng WC; hit enemy gây damage.
+Hazard không reposition entity hoặc đổi movement flag.
+
 ## Enemy và progression
 
 - Runner đuổi/Attack, weighted cao ở Phase 1.
@@ -72,6 +124,17 @@ Victory short-circuit enemy spawn, skill drop và pending UI.
 - Thrower khóa rồi relocate Runner/Jumper; relocation không đổi target movement flag, weighted cao ở Phase 3.
 
 Phase dựa trên Lowest WC Reached nên chỉ tiến, không lùi khi hit làm WC tăng.
+
+Spawn cooldown giảm base mỗi completed beat.
+Valid Move thêm Move Pressure.
+Valid Dash thêm Dash Spawn Pressure mạnh hơn.
+Chỉ một pressure event được cộng mỗi beat.
+Spawn dùng phase mới sau due effects.
+
+`HighestWCReached` theo dõi threshold đi lên.
+Mỗi high-WC threshold chỉ mở dialog một lần/run.
+Dialog pause timer và toàn progression liên quan.
+Continue trở lại pending UI; Exit là VoluntaryExit, không phải Loss.
 
 ## UI priority
 

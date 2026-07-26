@@ -164,9 +164,9 @@ namespace CountdownGame.Unity
 
         public void EndBeat(bool freeze = false)
         {
-            Debug.Log($"[Countdown] End Turn requested for beat {_simulation.Run.BeatNumber}.");
+            Debug.Log($"[Countdown] Beat end requested for beat {_simulation.Run.BeatNumber}.");
             _simulation.EndPlayerPhase(freeze);
-            Debug.Log($"[Countdown] End Turn resolved at phase {_simulation.Phase}.");
+            Debug.Log($"[Countdown] Beat end resolved at phase {_simulation.Phase}.");
             if (_simulation.Phase == BeatPhase.NotStarted) _simulation.StartBeat();
         }
 
