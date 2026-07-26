@@ -31,7 +31,6 @@ namespace CountdownGame.UI
         [SerializeField] private Color availableSlotColor = Color.white;
         [SerializeField] private Color unavailableSlotColor = new Color(0.55f, 0.55f, 0.55f, 1f);
         [SerializeField] private Color selectedSlotColor = new Color(0.85f, 0.95f, 1f, 1f);
-        [SerializeField, Min(0.1f)] private float beatCountdownSeconds = 4f;
         [SerializeField] private Color wcCounterColor = new Color(1f, 0.55f, 0.45f, 1f);
         [SerializeField] private Color emptyWcCounterColor = new Color(0.2f, 0.08f, 0.08f, 0.8f);
         [SerializeField, Min(1)] private int wcBaseSegmentCount = 3;
@@ -46,7 +45,6 @@ namespace CountdownGame.UI
         [SerializeField] private Button[] replaceActiveButtons;
         [SerializeField] private Button replacePassiveButton;
         [SerializeField] private Button discardButton;
-        [SerializeField] private Button endTurnButton;
         [SerializeField] private Button returnMenuButton;
 
         private readonly List<Image> _manaSegments = new List<Image>();
@@ -80,8 +78,6 @@ namespace CountdownGame.UI
             if (discardButton != null)
                 discardButton.onClick.AddListener(
                     () => controller?.ResolvePickup(PickupDecisionKind.Discard));
-            if (endTurnButton != null)
-                endTurnButton.onClick.AddListener(EndTurn);
             if (returnMenuButton != null)
                 returnMenuButton.onClick.AddListener(SceneFlow.LoadMenu);
         }
@@ -106,9 +102,6 @@ namespace CountdownGame.UI
             SetManaSegments(state.CurrentMana, state.MaxMana);
             SetCounterFill(noMoveCounterFill, state.NoMoveCounterFill, noMoveCounterColor);
             SetCounterFill(bombCounterFill, state.BombCounterFill, bombCounterColor);
-
-            if (endTurnButton != null)
-                endTurnButton.interactable = state.EndBeatInteractable;
 
             for (var i = 0; i < Length(activeButtons); i++)
             {
@@ -170,13 +163,6 @@ namespace CountdownGame.UI
             }
         }
 
-        private void EndTurn()
-        {
-            if (controller != null && controller.Simulation != null &&
-                controller.Simulation.Phase == BeatPhase.Player)
-                controller.EndBeat();
-        }
-
         private void SetIcon(Image image, string skillId)
         {
             if (image == null) return;
@@ -233,34 +219,42 @@ namespace CountdownGame.UI
 
         private void SetBeatCountdown(GameplayHudState state)
         {
-            if (beatCounterFill == null) return;
-
             if (state.BeatNumber != _lastBeatNumber)
             {
                 _lastBeatNumber = state.BeatNumber;
                 _beatCountdownElapsed = 0f;
             }
 
-            var active = state.BeatNumber >= 0;
+            var active = state.BeatTimerActive;
             if (active)
                 _beatCountdownElapsed += Time.deltaTime;
 
-            var duration = Mathf.Max(0.1f, beatCountdownSeconds);
+            var duration = Mathf.Max(0.1f, state.BeatDurationSeconds);
             var fill = active ? 1f - Mathf.Clamp01(_beatCountdownElapsed / duration) : 0f;
-            var rect = beatCounterFill.rectTransform;
+            if (beatCounterFill != null)
+            {
+                var rect = beatCounterFill.rectTransform;
 
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchorMin = new Vector2(0f, 0f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.pivot = new Vector2(0.5f, 0.5f);
 
-            beatCounterFill.type = Image.Type.Filled;
-            beatCounterFill.fillMethod = Image.FillMethod.Horizontal;
-            beatCounterFill.fillOrigin = (int)Image.OriginHorizontal.Left;
-            beatCounterFill.fillClockwise = true;
-            beatCounterFill.fillAmount = fill;
-            beatCounterFill.gameObject.SetActive(fill > 0.001f);
+                beatCounterFill.type = Image.Type.Filled;
+                beatCounterFill.fillMethod = Image.FillMethod.Horizontal;
+                beatCounterFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+                beatCounterFill.fillClockwise = true;
+                beatCounterFill.fillAmount = fill;
+                beatCounterFill.gameObject.SetActive(fill > 0.001f);
+            }
+
+            if (active && _beatCountdownElapsed >= duration &&
+                controller != null && controller.Simulation != null &&
+                controller.Simulation.Phase == BeatPhase.Player)
+            {
+                controller.EndBeat();
+            }
         }
 
         private void SetManaSegments(int currentMana, int maxMana)

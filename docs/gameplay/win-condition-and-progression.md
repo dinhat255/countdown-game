@@ -4,6 +4,8 @@
 
 WC là tiến trình Victory và thước đo áp lực duy nhất của player. Hit/effect có thể cộng WC; WC không có upper clamp.
 
+WC hiện tại cũng quyết định Player Phase timer: `2,4s` khi `WC > 10`, `1,8s` khi `5 < WC ≤ 10`, và `1,6s` khi `0 < WC ≤ 5`. Exact `10` dùng `1,8s`; exact `5` dùng `1,6s`. Tier đổi ngay theo WC hiện tại mà không reset elapsed time. Player Phase tự kết thúc khi timer hết; không có End Beat input/button.
+
 ## Điều kiện theo self-movement
 
 ```text
@@ -42,7 +44,7 @@ Standard Move/Dash invalid bị reject trước resolve, vì vậy:
 Nhịp 1: Attack, không Move       → Streak 1, WC không giảm
 Nhịp 2: Snipe                    → Streak 2, WC giảm
 Nhịp 3: valid Move hoặc Dash     → Streak 0
-Nhịp 4: End Beat, không action   → Streak 1
+Nhịp 4: timeout, không action    → Streak 1
 ```
 
 Stationary action không cản streak.

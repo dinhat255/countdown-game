@@ -27,6 +27,8 @@ Một Active chỉ resolve khi phase, player action, slot, Mana, target, path, m
 
 Active trùng nhau được phép. Passive chỉ có một slot nên không stack.
 
+Player Phase tự timeout theo tier WC hiện tại. Targeting không tạo action và không reset timer; chỉ valid resolve mới consume action. Replacement/dialog modal pause timer theo game-flow rule.
+
 ## Starter Active
 
 | Level | Skill | Mana | Hiệu ứng |
