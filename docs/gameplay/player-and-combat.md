@@ -15,7 +15,7 @@ Hit, hazard, status, Snipe, Ward, Bomb, Shockwave và Freeze không reposition p
 
 ## Mana và stationary action
 
-Player có Mana `3/6` lúc bắt đầu run. Active hợp lệ trừ Mana và bị consume. Player có thể dùng nhiều stationary Active trong một Player Phase nếu đủ Mana và guard.
+Player có Mana `3/6` lúc bắt đầu run. Active hợp lệ trừ Mana, bị consume và dùng player action duy nhất của beat. Sau đó player không thể dùng skill, Attack, Move hoặc Dash khác tới beat sau.
 
 Nếu không valid self-move trong beat, player hồi `2` Mana cuối beat, hoặc `3` với Meditation. Mana restore xảy ra sau WC/Standing Streak và trước due hazards.
 
@@ -39,14 +39,18 @@ Starter offensive damage:
 - Snipe: `3`, target đầu tiên trong bốn facing cells.
 - Shockwave: `2`, mọi enemy trong tám ô kề.
 - Bomb: `2`, blast `3×3`.
-- Damage Up cộng `1` vào player Attack và các offensive skill.
+- Damage Up cộng `1` vào các offensive skill; player Attack là instant kill nên không nhận modifier.
 - Neutral Environmental Bomb/Turret không nhận Damage Up.
 
 Damage không đổi movement flag của source hoặc target.
 
 ## Attack
 
-Attack là stationary action chủ động theo facing, có cooldown riêng và không dùng Active slot. Nó có thể dùng cùng consumable skill. Attack cooldown không bị Refresh vì Refresh không còn trong skill pool.
+Player Attack bằng cách chọn một enemy còn sống ở ô cardinal kề bên. Attack giết enemy được chọn qua shared damage/death resolver, cập nhật facing về phía target, nhưng không đổi vị trí hoặc `PlayerMovedThisBeat`.
+
+Attack là stationary action chủ động và không dùng Active slot. Successful Attack consume player action duy nhất của beat, nên skill, Attack, standard Move và Dash khác đều bị reject trong phần còn lại của beat. Player vẫn ở nguyên cell và `PlayerMovedThisBeat` vẫn false.
+
+Ở end-of-beat, successful Attack vẫn tăng Standing Streak và hồi no-move Mana nhưng bỏ qua WC reduction. Attack vì vậy không làm giảm WC trực tiếp hoặc qua no-move update.
 
 ## End Beat và UI
 

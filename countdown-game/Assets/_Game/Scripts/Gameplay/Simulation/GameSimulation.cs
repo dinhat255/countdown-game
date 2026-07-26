@@ -40,6 +40,7 @@ namespace CountdownGame.Core
         private bool _wardArmed;
         private bool _freezeArmed;
         private bool _freezeUsedThisBeat;
+        private PlayerActionKind _playerActionThisBeat;
 
         public GridState Grid { get; }
         public RunState Run { get; }
@@ -53,6 +54,9 @@ namespace CountdownGame.Core
         public IReadOnlyList<PlacedSkillBomb> Bombs => _bombs;
         public bool WardArmed => _wardArmed;
         public bool FreezeArmed => _freezeArmed;
+        public PlayerActionKind PlayerActionThisBeat => _playerActionThisBeat;
+        public bool PlayerActedThisBeat => _playerActionThisBeat != PlayerActionKind.None;
+        public bool PlayerAttackedThisBeat => _playerActionThisBeat == PlayerActionKind.Attack;
         public int PredictedNoMoveManaRestoration =>
             Skills.PassiveSlot == SkillIds.Meditation ? 3 : 2;
 
@@ -104,6 +108,7 @@ namespace CountdownGame.Core
             Run.BeatNumber++;
             Run.MovementPressure = 0;
             _freezeUsedThisBeat = false;
+            _playerActionThisBeat = PlayerActionKind.None;
             if (_wardArmed)
             {
                 _wardArmed = false;
@@ -115,7 +120,8 @@ namespace CountdownGame.Core
 
         public IReadOnlyList<GridCoord> GetAvailablePlayerMoveCells()
         {
-            if (Phase != BeatPhase.Player || !Player.IsAlive || Player.SelfMovedThisBeat)
+            if (Phase != BeatPhase.Player || !Player.IsAlive ||
+                Player.SelfMovedThisBeat || PlayerActedThisBeat)
                 return Array.Empty<GridCoord>();
 
             return GridDirections.Cardinal
@@ -131,10 +137,15 @@ namespace CountdownGame.Core
             if (Phase != BeatPhase.Player)
                 return MovementResult.Rejected(
                     Player.Id, MovementFailureReason.ActorDead, Player.Position, Player.Position);
+            if (PlayerActedThisBeat)
+                return MovementResult.Rejected(
+                    Player.Id, MovementFailureReason.ActionAlreadyUsed,
+                    Player.Position, Player.Position);
             var result = _movement.TryResolve(
                 new MovementRequest(Player.Id, MovementKind.Move, direction));
             if (result.Succeeded)
             {
+                _playerActionThisBeat = PlayerActionKind.Move;
                 Run.MovementPressure = _movementTuning.MovePressure;
                 _events.PressureCreated(_movementTuning.MovePressure, MovementKind.Move);
                 CollectGroundItem(result.Landing);
@@ -147,10 +158,15 @@ namespace CountdownGame.Core
             if (Phase != BeatPhase.Player)
                 return MovementResult.Rejected(
                     Player.Id, MovementFailureReason.ActorDead, Player.Position, Player.Position);
+            if (PlayerActedThisBeat)
+                return MovementResult.Rejected(
+                    Player.Id, MovementFailureReason.ActionAlreadyUsed,
+                    Player.Position, Player.Position);
             var result = _movement.TryResolve(new MovementRequest(
                 Player.Id, MovementKind.Dash, Player.Facing, _movementTuning.DashDistance));
             if (result.Succeeded)
             {
+                _playerActionThisBeat = PlayerActionKind.Dash;
                 var previous = Run.Wc;
                 Run.ChangeWc(_movementTuning.DashWcIncrease);
                 _events.WcChanged(previous, Run.Wc, "Dash");
@@ -159,6 +175,22 @@ namespace CountdownGame.Core
                 CollectGroundItem(result.Landing);
             }
             return result;
+        }
+
+        public bool TryPlayerAttack(GridCoord targetCell)
+        {
+            if (Phase != BeatPhase.Player || !Player.IsAlive || PlayerActedThisBeat ||
+                Player.Position.ManhattanDistance(targetCell) != 1)
+                return false;
+
+            var enemy = Grid.GetActorAt(targetCell);
+            if (enemy == null || !IsEnemy(enemy)) return false;
+
+            Player.Facing = DirectionFromTo(Player.Position, targetCell);
+            _playerActionThisBeat = PlayerActionKind.Attack;
+            var killed = DamageEnemy(Player.Id, enemy, enemy.Health, "Attack") > 0;
+            if (!killed) _playerActionThisBeat = PlayerActionKind.None;
+            return killed;
         }
 
         public bool EquipActiveSkill(int slotIndex, string skillId)
@@ -185,6 +217,8 @@ namespace CountdownGame.Core
             var skillId = Skills.GetActive(slotIndex);
             if (Phase != BeatPhase.Player)
                 return RejectSkill(slotIndex, skillId, SkillUseFailureReason.WrongPhase);
+            if (PlayerActedThisBeat)
+                return RejectSkill(slotIndex, skillId, SkillUseFailureReason.ActionAlreadyUsed);
             if (slotIndex < 0 || slotIndex >= Skills.ActiveSlots.Count)
                 return RejectSkill(slotIndex, skillId, SkillUseFailureReason.InvalidSlot);
             if (string.IsNullOrEmpty(skillId))
@@ -234,6 +268,8 @@ namespace CountdownGame.Core
             var previousMana = Run.CurrentMana;
             Run.TrySpendMana(definition.ManaCost);
             _events.ManaChanged(previousMana, Run.CurrentMana, $"Skill:{skillId}");
+            if (skillId != SkillIds.Dash)
+                _playerActionThisBeat = PlayerActionKind.Skill;
 
             switch (skillId)
             {
@@ -356,9 +392,12 @@ namespace CountdownGame.Core
             if (!Player.PlayerMovedThisBeat)
             {
                 Run.StandingStreak++;
-                var previous = Run.Wc;
-                Run.ChangeWc(-1);
-                _events.WcChanged(previous, Run.Wc, "NoMove");
+                if (_playerActionThisBeat != PlayerActionKind.Attack)
+                {
+                    var previous = Run.Wc;
+                    Run.ChangeWc(-1);
+                    _events.WcChanged(previous, Run.Wc, "NoMove");
+                }
                 var previousMana = Run.CurrentMana;
                 Run.RestoreMana(PredictedNoMoveManaRestoration);
                 if (previousMana != Run.CurrentMana)
@@ -400,6 +439,7 @@ namespace CountdownGame.Core
 
         private MovementFailureReason ValidateDash()
         {
+            if (PlayerActedThisBeat) return MovementFailureReason.ActionAlreadyUsed;
             if (Player.SelfMovedThisBeat) return MovementFailureReason.AlreadySelfMoved;
             for (var distance = 1; distance <= _movementTuning.DashDistance; distance++)
             {
@@ -439,6 +479,14 @@ namespace CountdownGame.Core
 
         private int PlayerDamage(int baseDamage) =>
             baseDamage + (Skills.PassiveSlot == SkillIds.DamageUp ? 1 : 0);
+
+        private static GridDirection DirectionFromTo(GridCoord origin, GridCoord target)
+        {
+            if (target.Y > origin.Y) return GridDirection.Up;
+            if (target.X > origin.X) return GridDirection.Right;
+            if (target.Y < origin.Y) return GridDirection.Down;
+            return GridDirection.Left;
+        }
 
         public int DamageEnemy(int sourceId, ActorState enemy, int damage, string cause)
         {

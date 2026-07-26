@@ -51,10 +51,9 @@ UI hiển thị Jumper landing, Thrower locked target/path/impact, Freeze Paused
 ## Canonical flow
 
 ```text
-Reset movement flags
+Reset movement flags và player action
 → Player Phase
-   → stationary consumable skills nếu hợp lệ
-   → tối đa một valid Move hoặc Dash
+   → đúng một valid Skill, Attack, Move hoặc Dash
 → Enemy Phase hoặc Freeze skip
 → End-of-beat
    → no-move WC/streak rồi Mana restore
